@@ -75,7 +75,7 @@ process_files_plain() {
     echo "[*]$3--> $1" >&3
     local HAS_ERRORS=false
     while read -r LINE < "$1" ; do
-        find "$LINE" -follow -type f || HAS_ERRORS=true
+        find "$LINE" -follow || HAS_ERRORS=true
         if [ "$HAS_ERRORS" = true ]; then
             false
         fi
@@ -96,21 +96,33 @@ process_files_by_type() {
     fi
 }
 
+checksum_files() {
+	while read -r LINE; do
+        [ -f "$LINE" ] && (md5sum "$LINE" || return 1)
+        stat -c "%A %U %G %F %N" "$LINE" || return 1
+	done	
+}
+
 process_files() {
     FILES=$(process_files_by_type "$1" "$2" "$3" | sort) || return 1
     if [ -z "$FILES" ]; then
         echo "[$2]--> empty input." >&2
         return 1
     fi
-    CHECKSUM=$(echo "$FILES" | xargs -r -d '\n' md5sum | md5sum | cut -f 1 -d " ") || return 1
+    CHECKSUM=$(echo "$FILES" | checksum_files | md5sum | cut -f 1 -d " ") || return 1
     echo "[$2] NEW CHECKSUM: $CHECKSUM" >&3
     CCHECKSUM=$($GET_FILE "$PREFIX-$2.checksum") || return 1
     echo "[$2] OLD CHECKSUM: ${CCHECKSUM:=<empty>}" >&3
 
     if [ "$CCHECKSUM" != "$CHECKSUM" ]; then
         echo "[$2]--> creating new backup file." >&3
-        echo "$FILES" | sed -e "s/^\///" | (cd /; tar -T - -czf - ) | encrypt_and_sign | $PERSIST_FILE "$PREFIX-$2-$BAKDATE.tar.gz.gpg" || return 1
+        echo "$FILES" | sed -e "s/^\///" | \
+            (cd /; tar --verbatim-files-from --no-recursion -T - -czf - ) | \
+            encrypt_and_sign | \
+            $PERSIST_FILE "$PREFIX-$2-$BAKDATE.tar.gz.gpg" || return 1
         echo "$CHECKSUM" | $PERSIST_FILE "$PREFIX-$2.checksum"
+    else
+        echo "[$2]--> skipping..." >&3
     fi
 }
 
