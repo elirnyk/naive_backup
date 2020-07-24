@@ -222,6 +222,7 @@ process_and_store_single_definition() {
 }
 
 encrypt_and_sign() {
+    # shellcheck disable=SC2046
     gpg --batch --sign --encrypt $(echo "$ENCRYPT_RECIPIENT" | tr "," "\n" | sed -e 's/^/--recipient /')
 }
 
