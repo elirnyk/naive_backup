@@ -63,7 +63,13 @@ process_files_executable() {
         return 1
     fi
     echo "[x]$3--> $1" >&3
-    "$1"
+    
+    "$1" 
+    
+    if [ $? != "0" ]; then
+        echo "Failed to run $1" >&2 
+        return 1
+    fi
 }
 
 process_files_plain() {
@@ -74,8 +80,8 @@ process_files_plain() {
 
     echo "[*]$3--> $1" >&3
     local HAS_ERRORS=false
-    while read -r LINE < "$1" ; do
-        find "$LINE" -follow || HAS_ERRORS=true
+    cat "$1" | while read -r LINE ; do
+        [ -z "$LINE" ] || find "$LINE" -follow -type f || HAS_ERRORS=true
         if [ "$HAS_ERRORS" = true ]; then
             false
         fi
@@ -97,10 +103,13 @@ process_files_by_type() {
 }
 
 checksum_files() {
-	while read -r LINE; do
-        [ -f "$LINE" ] && (md5sum "$LINE" || return 1)
+    while read -r LINE; do
+	    if ! ([ -f "$LINE" ] && md5sum "$LINE" ) ; then
+	    echo "$LINE is not regular file" >&2
+	    return 1
+	fi
         stat -c "%A %U %G %F %N" "$LINE" || return 1
-	done	
+    done	
 }
 
 process_files() {
@@ -108,6 +117,9 @@ process_files() {
     if [ -z "$FILES" ]; then
         echo "[$2]--> empty input." >&2
         return 1
+    else
+	LINES=$(echo "$FILES" | wc -l)
+	echo "[$2]--> $LINES files to process" >&2
     fi
     CHECKSUM=$(echo "$FILES" | checksum_files | md5sum | cut -f 1 -d " ") || return 1
     echo "[$2] NEW CHECKSUM: $CHECKSUM" >&3
@@ -116,10 +128,7 @@ process_files() {
 
     if [ "$CCHECKSUM" != "$CHECKSUM" ]; then
         echo "[$2]--> creating new backup file." >&3
-        echo "$FILES" | sed -e "s/^\///" | \
-            (cd /; tar --verbatim-files-from --no-recursion -T - -czf - ) | \
-            encrypt_and_sign | \
-            $PERSIST_FILE "$PREFIX-$2-$BAKDATE.tar.gz.gpg" || return 1
+        echo "$FILES" | sed -e "s/^\///" | (cd /; tar  --verbatim-files-from -T - -czf - ) | encrypt_and_sign | $PERSIST_FILE "$PREFIX-$2-$BAKDATE.tar.gz.gpg" || return 1
         echo "$CHECKSUM" | $PERSIST_FILE "$PREFIX-$2.checksum"
     else
         echo "[$2]--> skipping..." >&3
@@ -222,7 +231,6 @@ process_and_store_single_definition() {
 }
 
 encrypt_and_sign() {
-    # shellcheck disable=SC2046
     gpg --batch --sign --encrypt $(echo "$ENCRYPT_RECIPIENT" | tr "," "\n" | sed -e 's/^/--recipient /')
 }
 
