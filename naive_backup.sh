@@ -265,7 +265,7 @@ CONF_REGEX_FIND=".*/\([0-9]+-\)*\(content\|files\)-\($TO_FIND\)\.\(lst\|d\|sh\)"
 CONF_REGEX_SED=".*/\([0-9]\+-\)*\(content\|files\)-\($TO_FIND\)\.\(lst\|d\|sh\)"
 
 if [ -f "$CONFDIR/settings.conf" ]; then
-    # shellcheck disable=SC1090
+    # shellcheck disable=SC1090,SC1091
     . "$CONFDIR/settings.conf"
 fi
 
@@ -299,7 +299,7 @@ if [ -z "$ENCRYPT_RECIPIENT" ]; then
     exit 2
 fi
 
-CONFIGS=$(find $CONFDIR -maxdepth 1 -regex "$CONF_REGEX_FIND" | sort)
+CONFIGS=$(find "$CONFDIR" -maxdepth 1 -regex "$CONF_REGEX_FIND" | sort)
 
 DUPES=$(echo "$CONFIGS" | sed -n -e "s#$CONF_REGEX_SED#\3#p" | sort | uniq --repeated)
 
