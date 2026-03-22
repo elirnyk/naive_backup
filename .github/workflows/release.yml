@@ -1,0 +1,161 @@
+name: Release Packager and Publisher
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-deb:
+    name: Build Debian Package
+    runs-on: ubuntu-latest
+    outputs:
+      package_name: ${{ steps.get_filename.outputs.package_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set Version in Changelog
+        run: |
+          VERSION="${{ github.ref_name }}"
+          dch -v "${VERSION#v}-1" "New release ${VERSION}."
+          cat debian/changelog
+
+      - name: Install Dependencies
+        run: sudo apt-get update && sudo apt-get install -y devscripts debhelper
+
+      - name: Build .deb package
+        run: dpkg-buildpackage -us -uc -b
+
+      - name: Get Package Filename
+        id: get_filename
+        run: echo "package_name=$(ls ../*.deb)" >> $GITHUB_OUTPUT
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-package
+          path: ../*.deb
+
+  build-ipk:
+    name: Build OpenWrt Package
+    runs-on: ubuntu-latest
+    outputs:
+      package_name: ${{ steps.get_filename.outputs.package_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install ipkg-utils
+        run: sudo apt-get update && sudo apt-get install -y ipkg-utils
+
+      - name: Create Staging Directory
+        run: |
+          mkdir -p staging/CONTROL
+          mkdir -p staging/data/usr/bin
+
+      - name: Create OPKG Control File
+        run: |
+          cat << EOF > staging/CONTROL/control
+          Package: naive-backup
+          Version: ${{ github.ref_name }}
+          Depends: bash, findutils, coreutils-stat, coreutils-sort, tar, gpg, sed
+          Architecture: all
+          Maintainer: Gemini CLI <gemini-cli@google.com>
+          Description: A simple shell-based backup script.
+          EOF
+
+      - name: Copy Script
+        run: |
+          cp naive_backup.sh staging/data/usr/bin/naive-backup
+          chmod +x staging/data/usr/bin/naive-backup
+
+      - name: Build .ipk package
+        run: ipkg-build staging
+
+      - name: Get Package Filename
+        id: get_filename
+        run: echo "package_name=$(ls ./*.ipk)" >> $GITHUB_OUTPUT
+
+      - name: Upload .ipk artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipk-package
+          path: ./*.ipk
+
+  publish:
+    name: Publish to GitHub Pages
+    needs: [build-deb, build-ipk]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Install Tools
+        run: sudo apt-get update && sudo apt-get install -y opkg-utils apt-utils gnupg
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Download .deb artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deb-package
+          path: dist/deb
+
+      - name: Download .ipk artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ipk-package
+          path: dist/ipk
+
+      - name: Import GPG Key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import --passphrase-fd 0
+          gpg --list-keys
+
+      - name: Update APT Repository
+        run: |
+          mkdir -p gh-pages/apt
+          mv dist/deb/${{ needs.build-deb.outputs.package_name }} gh-pages/apt/
+          cd gh-pages/apt
+          apt-ftparchive packages . > Packages
+          gzip -c Packages > Packages.gz
+          apt-ftparchive release . > Release
+          GPG_KEY_ID=$(gpg --list-keys --with-colons | grep 'fpr' | head -n 1 | cut -d: -f10)
+          gpg --batch --yes --clearsign -u "$GPG_KEY_ID" -o InRelease Release
+          gpg --batch --yes -abs -u "$GPG_KEY_ID" -o Release.gpg Release
+          cd ../..
+
+      - name: Update OPKG Repository
+        run: |
+          mkdir -p gh-pages/opkg
+          mv dist/ipk/${{ needs.build-ipk.outputs.package_name }} gh-pages/opkg/
+          cd gh-pages/opkg
+          opkg-generate-index -h .
+          GPG_KEY_ID=$(gpg --list-keys --with-colons | grep 'fpr' | head -n 1 | cut -d: -f10)
+          gpg --batch --yes --detach-sign --armor -u "$GPG_KEY_ID" Packages
+          cd ../..
+      
+      - name: Export Public GPG key
+        run: |
+          GPG_KEY_ID=$(gpg --list-keys --with-colons | grep 'fpr' | head -n 1 | cut -d: -f10)
+          gpg --export --armor "$GPG_KEY_ID" > gh-pages/public.key
+
+      - name: Commit and Push to gh-pages
+        run: |
+          cd gh-pages
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add .
+          if git diff-index --quiet HEAD; then
+            echo "No changes to commit."
+          else
+            git commit -m "Publish packages for ${{ github.ref_name }}"
+            git push
+          fi

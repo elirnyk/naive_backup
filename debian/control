@@ -1,0 +1,13 @@
+Source: naive-backup
+Section: utils
+Priority: optional
+Maintainer: Gemini CLI <gemini-cli@google.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.5.0
+Homepage: https://github.com/${{ github.repository }}
+
+Package: naive-backup
+Architecture: all
+Depends: bash, coreutils, findutils, tar, gpg, sed
+Description: A simple shell-based backup script
+ A lightweight backup utility that uses GPG for encryption and tar/bzip2 for archiving.
