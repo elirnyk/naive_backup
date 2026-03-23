@@ -123,14 +123,18 @@ jobs:
           path: dist/ipk
 
       - name: Import GPG Key
+        id: import_gpg
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
-          echo "$GPG_PRIVATE_KEY" | gpg --batch --import --passphrase-fd 0
-          gpg --list-keys
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          GPG_KEY_ID=$(gpg --list-keys --with-colons | grep 'fpr' | head -n 1 | cut -d: -f10)
+          echo "key_id=$GPG_KEY_ID" >> $GITHUB_OUTPUT
+          echo "Imported GPG key $GPG_KEY_ID"
 
       - name: Update APT Repository
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           mkdir -p gh-pages/apt
           mv dist/deb/${{ needs.build-deb.outputs.package_name }} gh-pages/apt/
@@ -138,25 +142,24 @@ jobs:
           apt-ftparchive packages . > Packages
           gzip -c Packages > Packages.gz
           apt-ftparchive release . > Release
-          GPG_KEY_ID=$(gpg --list-keys --with-colons | grep 'fpr' | head -n 1 | cut -d: -f10)
-          gpg --batch --yes --clearsign -u "$GPG_KEY_ID" -o InRelease Release
-          gpg --batch --yes -abs -u "$GPG_KEY_ID" -o Release.gpg Release
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --clearsign -u "${{ steps.import_gpg.outputs.key_id }}" -o InRelease Release
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" -abs -u "${{ steps.import_gpg.outputs.key_id }}" -o Release.gpg Release
           cd ../..
 
       - name: Update OPKG Repository
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           mkdir -p gh-pages/opkg
           mv dist/ipk/${{ needs.build-ipk.outputs.package_name }} gh-pages/opkg/
           cd gh-pages/opkg
           opkg-generate-index -h .
-          GPG_KEY_ID=$(gpg --list-keys --with-colons | grep 'fpr' | head -n 1 | cut -d: -f10)
-          gpg --batch --yes --detach-sign --armor -u "$GPG_KEY_ID" Packages
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --detach-sign --armor -u "${{ steps.import_gpg.outputs.key_id }}" Packages
           cd ../..
       
       - name: Export Public GPG key
         run: |
-          GPG_KEY_ID=$(gpg --list-keys --with-colons | grep 'fpr' | head -n 1 | cut -d: -f10)
-          gpg --export --armor "$GPG_KEY_ID" > gh-pages/public.key
+          gpg --export --armor "${{ steps.import_gpg.outputs.key_id }}" > gh-pages/public.key
 
       - name: Commit and Push to gh-pages
         run: |
