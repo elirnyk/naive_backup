@@ -80,14 +80,13 @@ process_files_plain() {
 
     echo "[*]$3--> $1" >&3
     local HAS_ERRORS=false
-    cat "$1" | while read -r LINE ; do
+    
+    while IFS= read -r LINE; do
         [ -z "$LINE" ] || find "$LINE" -follow -type f || HAS_ERRORS=true
-        if [ "$HAS_ERRORS" = true ]; then
-            false
-        fi
-    done
-    # shellcheck disable=SC2181
-    if [ $? != "0" ]; then
+    done < "$1"
+
+    if [ "$HAS_ERRORS" = true ]; then
+        echo "Error processing file list '$1'." >&2
         return 1
     fi
 }
@@ -231,6 +230,10 @@ process_and_store_single_definition() {
 }
 
 encrypt_and_sign() {
+    # SC2046 is disabled because we expect ENCRYPT_RECIPIENT to be a simple
+    # comma-separated list of emails or key IDs without spaces. This is a
+    # pragmatic choice to keep the code concise.
+    # shellcheck disable=SC2046
     gpg --batch --sign --encrypt $(echo "$ENCRYPT_RECIPIENT" | tr "," "\n" | sed -e 's/^/--recipient /')
 }
 
