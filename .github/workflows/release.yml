@@ -19,6 +19,9 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y devscripts debhelper
 
       - name: Set Version in Changelog
+        env:
+          DEBEMAIL: "actions@github.com"
+          DEBFULLNAME: "GitHub Actions"
         run: |
           VERSION="${{ github.ref_name }}"
           dch -v "${VERSION#v}-1" "New release ${VERSION}."
@@ -38,7 +41,7 @@ jobs:
           path: ../*.deb
 
   build-ipk:
-    name: Build OpenWrt Package
+    name: Build OpenWrt Package (manual)
     runs-on: ubuntu-latest
     outputs:
       package_name: ${{ steps.get_filename.outputs.package_name }}
@@ -46,17 +49,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install opkg-utils
-        run: sudo apt-get update && sudo apt-get install -y opkg-utils
-
       - name: Create Staging Directory
         run: |
-          mkdir -p staging/CONTROL
+          mkdir -p staging/control
           mkdir -p staging/data/usr/bin
 
       - name: Create OPKG Control File
         run: |
-          cat << EOF > staging/CONTROL/control
+          cat << EOF > staging/control/control
           Package: naive-backup
           Version: ${{ github.ref_name }}
           Depends: bash, findutils, coreutils-stat, coreutils-sort, tar, gpg, sed
@@ -70,18 +70,26 @@ jobs:
           cp naive_backup.sh staging/data/usr/bin/naive-backup
           chmod +x staging/data/usr/bin/naive-backup
 
-      - name: Build .ipk package
-        run: opkg-build staging
+      - name: Build .ipk package manually
+        id: build_ipk
+        run: |
+          PACKAGE_NAME="naive-backup_${{ github.ref_name }}_all.ipk"
+          echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+          
+          echo "2.0" > debian-binary
+          tar -czf control.tar.gz -C staging/control .
+          tar -czf data.tar.gz -C staging/data .
+          ar rcs "$PACKAGE_NAME" debian-binary control.tar.gz data.tar.gz
 
       - name: Get Package Filename
         id: get_filename
-        run: echo "package_name=$(ls ./*.ipk)" >> $GITHUB_OUTPUT
+        run: echo "package_name=${{ steps.build_ipk.outputs.package_name }}" >> $GITHUB_OUTPUT
 
       - name: Upload .ipk artifact
         uses: actions/upload-artifact@v4
         with:
           name: ipk-package
-          path: ./*.ipk
+          path: ${{ steps.build_ipk.outputs.package_name }}
 
   publish:
     name: Publish to GitHub Pages
@@ -91,7 +99,7 @@ jobs:
       contents: write
     steps:
       - name: Install Tools
-        run: sudo apt-get update && sudo apt-get install -y opkg-utils apt-utils gnupg
+        run: sudo apt-get update && sudo apt-get install -y apt-utils gnupg
 
       - name: Checkout gh-pages branch
         uses: actions/checkout@v4

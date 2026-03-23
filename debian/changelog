@@ -1,5 +1,5 @@
-naive-backup (0.1.0) unstable; urgency=medium
+naive-backup (0.0.1-1) unstable; urgency=medium
 
-  * Initial release.
+  * Initial placeholder release.
 
  -- Gemini CLI <gemini-cli@google.com>  Sat, 21 Mar 2026 12:00:00 +0000
