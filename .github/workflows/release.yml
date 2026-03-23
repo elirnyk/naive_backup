@@ -80,19 +80,15 @@ jobs:
           echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
           
           echo "2.0" > debian-binary
-          tar -czf control.tar.gz -C staging/control .
-          tar -czf data.tar.gz -C staging/data .
+          (cd staging/control && tar -czf ../../control.tar.gz control)
+          (cd staging/data && tar -czf ../../data.tar.gz usr)
           ar rcs "$PACKAGE_NAME" debian-binary control.tar.gz data.tar.gz
-
-      - name: Get Package Filename
-        id: get_filename
-        run: echo "package_name=${{ steps.build_ipk.outputs.package_name }}" >> $GITHUB_OUTPUT
 
       - name: Upload .ipk artifact
         uses: actions/upload-artifact@v4
         with:
           name: ipk-package
-          path: ${{ steps.build_ipk.outputs.package_name }}
+          path: naive-backup_${{ github.ref_name }}_all.ipk
 
   publish:
     name: Publish to GitHub Pages
