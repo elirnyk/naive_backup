@@ -151,9 +151,21 @@ jobs:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           mkdir -p gh-pages/opkg
-          mv dist/ipk/${{ needs.build-ipk.outputs.package_name }} gh-pages/opkg/
+          mv dist/ipk/*.ipk gh-pages/opkg/
           cd gh-pages/opkg
-          opkg-generate-index -h .
+          
+          # Manual opkg-generate-index implementation
+          rm -f Packages Packages.gz
+          for pkg in *.ipk; do
+            [ -f "$pkg" ] || continue
+            ar x "$pkg" control.tar.gz
+            tar -xzOf control.tar.gz control >> Packages
+            printf "Filename: %s\nSize: %s\nSHA256sum: %s\n\n" \
+              "$pkg" "$(stat -c%s "$pkg")" "$(sha256sum "$pkg" | cut -d' ' -f1)" >> Packages
+            rm -f control.tar.gz
+          done
+          gzip -c Packages > Packages.gz
+          
           gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --detach-sign --armor -u "${{ steps.import_gpg.outputs.key_id }}" Packages
           cd ../..
       
