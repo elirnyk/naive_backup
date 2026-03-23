@@ -15,14 +15,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Dependencies
+        run: sudo apt-get update && sudo apt-get install -y devscripts debhelper
+
       - name: Set Version in Changelog
         run: |
           VERSION="${{ github.ref_name }}"
           dch -v "${VERSION#v}-1" "New release ${VERSION}."
           cat debian/changelog
-
-      - name: Install Dependencies
-        run: sudo apt-get update && sudo apt-get install -y devscripts debhelper
 
       - name: Build .deb package
         run: dpkg-buildpackage -us -uc -b
@@ -46,8 +46,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install ipkg-utils
-        run: sudo apt-get update && sudo apt-get install -y ipkg-utils
+      - name: Install opkg-utils
+        run: sudo apt-get update && sudo apt-get install -y opkg-utils
 
       - name: Create Staging Directory
         run: |
@@ -71,7 +71,7 @@ jobs:
           chmod +x staging/data/usr/bin/naive-backup
 
       - name: Build .ipk package
-        run: ipkg-build staging
+        run: opkg-build staging
 
       - name: Get Package Filename
         id: get_filename
