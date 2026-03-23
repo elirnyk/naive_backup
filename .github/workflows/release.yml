@@ -30,15 +30,18 @@ jobs:
       - name: Build .deb package
         run: dpkg-buildpackage -us -uc -b
 
+      - name: Move package to current directory
+        run: mv ../*.deb .
+
       - name: Get Package Filename
         id: get_filename
-        run: echo "package_name=$(ls ../*.deb)" >> $GITHUB_OUTPUT
+        run: echo "package_name=$(ls *.deb)" >> $GITHUB_OUTPUT
 
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
           name: deb-package
-          path: ../*.deb
+          path: '*.deb'
 
   build-ipk:
     name: Build OpenWrt Package (manual)
