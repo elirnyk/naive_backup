@@ -64,9 +64,7 @@ process_files_executable() {
     fi
     echo "[x]$3--> $1" >&3
     
-    "$1" 
-    
-    if [ $? != "0" ]; then
+    if ! "$1"; then
         echo "Failed to run $1" >&2 
         return 1
     fi
