@@ -64,7 +64,7 @@ jobs:
           Package: naive-backup
           Version: ${VERSION#v}
           Depends: busybox, findutils, coreutils-stat, coreutils-sort, tar, gpg, sed
-          Architecture: noarch
+          Architecture: all
           Maintainer: Gemini CLI <gemini-cli@google.com>
           Description: A simple shell-based backup script.
           EOF
@@ -77,19 +77,23 @@ jobs:
       - name: Build .ipk package manually
         id: build_ipk
         run: |
-          PACKAGE_NAME="naive-backup_${{ github.ref_name }}_all.ipk"
+          VERSION="${{ github.ref_name }}"
+          PKG_VER="${VERSION#v}"
+          PACKAGE_NAME="naive-backup_${PKG_VER}_all.ipk"
           echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
           
           echo "2.0" > debian-binary
-          (cd staging/control && tar --format=gnu -czf ../../control.tar.gz control)
-          (cd staging/data && tar --format=gnu -czf ../../data.tar.gz usr)
-          ar -rc "$PACKAGE_NAME" debian-binary control.tar.gz data.tar.gz
+          tar -C staging/control --numeric-owner --owner=0 --group=0 -czf control.tar.gz control
+          tar -C staging/data --numeric-owner --owner=0 --group=0 -czf data.tar.gz usr
+          
+          rm -f "$PACKAGE_NAME"
+          ar r "$PACKAGE_NAME" debian-binary control.tar.gz data.tar.gz
 
       - name: Upload .ipk artifact
         uses: actions/upload-artifact@v4
         with:
           name: ipk-package
-          path: naive-backup_${{ github.ref_name }}_all.ipk
+          path: naive-backup_*.ipk
 
   publish:
     name: Publish to GitHub Pages
