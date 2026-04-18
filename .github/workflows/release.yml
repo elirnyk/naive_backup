@@ -59,11 +59,12 @@ jobs:
 
       - name: Create OPKG Control File
         run: |
+          VERSION="${{ github.ref_name }}"
           cat << EOF > staging/control/control
           Package: naive-backup
-          Version: ${{ github.ref_name }}
+          Version: ${VERSION#v}
           Depends: busybox, findutils, coreutils-stat, coreutils-sort, tar, gpg, sed
-          Architecture: all
+          Architecture: noarch
           Maintainer: Gemini CLI <gemini-cli@google.com>
           Description: A simple shell-based backup script.
           EOF
@@ -80,9 +81,9 @@ jobs:
           echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
           
           echo "2.0" > debian-binary
-          (cd staging/control && tar -czf ../../control.tar.gz control)
-          (cd staging/data && tar -czf ../../data.tar.gz usr)
-          ar rcs "$PACKAGE_NAME" debian-binary control.tar.gz data.tar.gz
+          (cd staging/control && tar --format=gnu -czf ../../control.tar.gz control)
+          (cd staging/data && tar --format=gnu -czf ../../data.tar.gz usr)
+          ar -rc "$PACKAGE_NAME" debian-binary control.tar.gz data.tar.gz
 
       - name: Upload .ipk artifact
         uses: actions/upload-artifact@v4
