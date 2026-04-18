@@ -160,11 +160,14 @@ jobs:
         env:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
+          # Manual opkg-generate-index implementation
           mkdir -p gh-pages/opkg
           mv dist/ipk/*.ipk gh-pages/opkg/
           cd gh-pages/opkg
           
-          # Manual opkg-generate-index implementation
+          NEW_PKGS=$(ls -1 *.ipk 2>/dev/null || echo "")
+          [ -z "$NEW_PKGS" ] && echo "No new IPK packages found" && exit 0
+          
           rm -f Packages Packages.gz
           for pkg in *.ipk; do
             [ -f "$pkg" ] || continue
