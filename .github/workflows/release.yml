@@ -162,7 +162,9 @@ jobs:
         run: |
           # Manual opkg-generate-index implementation
           # Only process newly built IPK, don't touch existing ones in gh-pages
-          PKGNAME="${{ needs.build-ipk.outputs.package_name }}"
+          VERSION="${{ github.ref_name }}"
+          PKG_VER="${VERSION#v}"
+          PKGNAME="naive-backup_${PKG_VER}_all.ipk"
           [ -z "$PKGNAME" ] && echo "No package name" && exit 1
           
           mkdir -p gh-pages/opkg
