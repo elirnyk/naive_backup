@@ -312,7 +312,7 @@ if [ -z "$CONFIGS" ]; then
     exit 2
 fi
 
-# Find duplicates using Here-Doc
+# Find duplicates
 DUPES=$(echo "$CONFIGS" | sed -n -e "s#.*/\([0-9]\+-\)*\(content\|files\)-\(.*\)\.\(lst\|d\|sh\)#\3#p" | sort | uniq --repeated)
 
 HAS_ERRORS=false
