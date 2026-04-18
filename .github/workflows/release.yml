@@ -85,18 +85,18 @@ jobs:
           printf "2.0\n" > debian-binary
           
           # Create control.tar.gz with numeric root ownership
-          (cd staging/control && tar --numeric-owner --owner=0 --group=0 -czf ../../control.tar.gz .)
-          
-          # Create data.tar.gz with numeric root ownership
-          (cd staging/data && tar --numeric-owner --owner=0 --group=0 -czf ../../data.tar.gz .)
-          
-          # Build .ipk as ar archive (native OpenWrt format, same as .deb)
-          rm -f "$PACKAGE_NAME"
-          ar rc "$PACKAGE_NAME" debian-binary control.tar.gz data.tar.gz
-          
-          # Verify IPK is valid
-          echo "Verifying IPK structure..."
-          ar t "$PACKAGE_NAME"
+(cd staging/control && tar --numeric-owner --owner=0 --group=0 -czf ../../control.tar.gz .)
+           
+           # Create data.tar.gz with numeric root ownership
+           (cd staging/data && tar --numeric-owner --owner=0 --group=0 -czf ../../data.tar.gz .)
+           
+           # Build .ipk as tar.gz (native OpenWrt format used by official repos)
+           rm -f "$PACKAGE_NAME"
+           tar --numeric-owner --owner=0 --group=0 -czf "$PACKAGE_NAME" debian-binary control.tar.gz data.tar.gz
+           
+           # Verify IPK is valid
+           echo "Verifying IPK structure..."
+           file "$PACKAGE_NAME"
 
       - name: Upload .ipk artifact
         uses: actions/upload-artifact@v4
@@ -174,7 +174,7 @@ jobs:
           # Process only new package
           echo "Processing package: $PKGNAME"
           rm -rf control.tar.gz control/
-          ar x "$PKGNAME" control.tar.gz || { echo "Failed to extract control.tar.gz"; exit 1; }
+          tar -xzf "$PKGNAME" control.tar.gz || { echo "Failed to extract control.tar.gz"; exit 1; }
           tar -xzf control.tar.gz 2>/dev/null || { echo "Failed to extract control"; exit 1; }
           [ -f control ] && cat control > Packages.new || cat control/control > Packages.new
           printf "Filename: %s\nSize: %s\nSHA256sum: %s\n\n" \
@@ -186,7 +186,7 @@ jobs:
             [ -f "$goodpkg" ] || continue
             echo "Adding known-good: $goodpkg"
             rm -rf control.tar.gz control/
-            ar x "$goodpkg" control.tar.gz || continue
+            tar -xzf "$goodpkg" control.tar.gz || continue
             tar -xzf control.tar.gz 2>/dev/null || continue
             [ -f control ] && cat control >> Packages.new || cat control/control >> Packages.new
             printf "Filename: %s\nSize: %s\nSHA256sum: %s\n\n" \
