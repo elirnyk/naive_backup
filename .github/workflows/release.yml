@@ -90,9 +90,9 @@ jobs:
           # Create data.tar.gz with numeric root ownership
           (cd staging/data && tar --numeric-owner --owner=0 --group=0 -czf ../../data.tar.gz .)
           
-          # Build .ipk as a gzipped tarball (native OpenWrt format)
+          # Build .ipk as ar archive (native OpenWrt format, same as .deb)
           rm -f "$PACKAGE_NAME"
-          tar --numeric-owner --owner=0 --group=0 -czf "$PACKAGE_NAME" debian-binary control.tar.gz data.tar.gz
+          ar rc "$PACKAGE_NAME" debian-binary control.tar.gz data.tar.gz
 
       - name: Upload .ipk artifact
         uses: actions/upload-artifact@v4
@@ -164,7 +164,11 @@ jobs:
           rm -f Packages Packages.gz
           for pkg in *.ipk; do
             [ -f "$pkg" ] || continue
-            tar -xzOf "$pkg" control.tar.gz > control.tar.gz
+            if ar t "$pkg" >/dev/null 2>&1; then
+              ar x "$pkg" control.tar.gz
+            else
+              tar -xzOf "$pkg" control.tar.gz > control.tar.gz
+            fi
             tar -xzOf control.tar.gz control >> Packages
             printf "Filename: %s\nSize: %s\nSHA256sum: %s\n\n" \
               "$pkg" "$(stat -c%s "$pkg")" "$(sha256sum "$pkg" | cut -d' ' -f1)" >> Packages
