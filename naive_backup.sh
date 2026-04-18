@@ -5,7 +5,6 @@ trap cleanup EXIT
 cleanup() {
     [ -f "$TMP_FILE1" ] && rm -f "$TMP_FILE1" && echo "[-]--> $TMP_FILE1"
     [ -f "$TMP_FILE2" ] && rm -f "$TMP_FILE2" && echo "[-]--> $TMP_FILE2"
-    [ -f "$CONFIGS_FILE" ] && rm -f "$CONFIGS_FILE" && echo "[-]--> $CONFIGS_FILE"
 }
 
 persist_check() {
@@ -298,27 +297,29 @@ if [ -z "$ENCRYPT_RECIPIENT" ]; then
     exit 2
 fi
 
-CONFIGS_FILE=$(mktemp -t naive_backup_configs.XXXXXXXX) || exit 2
 TMP_FILE1=$(mktemp -t naive_backup.XXXXXXXX) || exit 2
 TMP_FILE2=$(mktemp -t naive_backup.XXXXXXXX) || exit 2
 
 # Portable find to match definitions: (number-)?(content|files)-(name).(lst|d|sh)
-find "$CONFDIR" ! -name "$(basename "$CONFDIR")" -prune \
+# Store results in a variable
+CONFIGS=$(find "$CONFDIR" ! -name "$(basename "$CONFDIR")" -prune \
     \( -name "*-content-*.sh" -o -name "*-files-*.lst" -o -name "*-files-*.d" -o -name "*-files-*.sh" \
        -o -name "content-*.sh" -o -name "files-*.lst" -o -name "files-*.d" -o -name "files-*.sh" \) \
-    | sort > "$CONFIGS_FILE"
+    | sort)
 
-if [ ! -s "$CONFIGS_FILE" ]; then
+if [ -z "$CONFIGS" ]; then
     echo "Nothing to backup" >&2
     exit 2
 fi
 
-# Find duplicates
-DUPES=$(sed -n -e "s#.*/\([0-9]\+-\)*\(content\|files\)-\(.*\)\.\(lst\|d\|sh\)#\3#p" "$CONFIGS_FILE" | sort | uniq --repeated)
+# Find duplicates using Here-Doc
+DUPES=$(echo "$CONFIGS" | sed -n -e "s#.*/\([0-9]\+-\)*\(content\|files\)-\(.*\)\.\(lst\|d\|sh\)#\3#p" | sort | uniq --repeated)
 
 HAS_ERRORS=false
 
+# Use Here-Doc to feed the variable into the while loop to keep variable scope in the main shell
 while IFS= read -r CNF; do
+    [ -z "$CNF" ] && continue
     # Extract name, type, and extension using portable sed
     NAME=$(echo "$CNF" | sed -n -e "s#.*/\([0-9]\+-\)*\(content\|files\)-\(.*\)\.\(lst\|d\|sh\)#\3#p")
     TYPE=$(echo "$CNF" | sed -n -e "s#.*/\([0-9]\+-\)*\(content\|files\)-\(.*\)\.\(lst\|d\|sh\)#\2#p")
@@ -344,7 +345,9 @@ while IFS= read -r CNF; do
             HAS_ERRORS=true
         fi
     fi
-done < "$CONFIGS_FILE"
+done <<EOF
+$CONFIGS
+EOF
 
 if [ "$HAS_ERRORS" = "true" ]; then
     exit 1
