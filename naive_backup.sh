@@ -273,6 +273,7 @@ PREFIX=${PREFIX:=backup-$(uname -n)}
 
 BAKDATE=$(date +%F)
 
+# shellcheck disable=SC3040
 set -o pipefail
 ! command -v persist_file_custom >/dev/null 2>&1; HAS_CUSTOM_PERSIST_FILE=$?
 ! command -v get_file_custom >/dev/null 2>&1; HAS_CUSTOM_GET_FILE=$?
