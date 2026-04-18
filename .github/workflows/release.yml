@@ -173,25 +173,25 @@ jobs:
           
           # Process only new package
           echo "Processing package: $PKGNAME"
-          rm -f control.tar.gz control
+          rm -rf control.tar.gz control/
           ar x "$PKGNAME" control.tar.gz || { echo "Failed to extract control.tar.gz"; exit 1; }
-          tar -xzf control.tar.gz control || { echo "Failed to extract control"; exit 1; }
-          cat control > Packages.new
+          tar -xzf control.tar.gz 2>/dev/null || { echo "Failed to extract control"; exit 1; }
+          [ -f control ] && cat control > Packages.new || cat control/control > Packages.new
           printf "Filename: %s\nSize: %s\nSHA256sum: %s\n\n" \
             "$PKGNAME" "$(stat -c%s "$PKGNAME")" "$(sha256sum "$PKGNAME" | cut -d' ' -f1)" >> Packages.new
-          rm -f control control.tar.gz
+          rm -rf control control.tar.gz
           
           # Append only known-good existing packages (v0.1.7 and later)
           for goodpkg in naive-backup_0.1.7_all.ipk naive-backup_0.1.8_all.ipk naive-backup_0.1.9_all.ipk; do
             [ -f "$goodpkg" ] || continue
             echo "Adding known-good: $goodpkg"
-            rm -f control.tar.gz control
+            rm -rf control.tar.gz control/
             ar x "$goodpkg" control.tar.gz || continue
-            tar -xzf control.tar.gz control || continue
-            cat control >> Packages.new
+            tar -xzf control.tar.gz 2>/dev/null || continue
+            [ -f control ] && cat control >> Packages.new || cat control/control >> Packages.new
             printf "Filename: %s\nSize: %s\nSHA256sum: %s\n\n" \
               "$goodpkg" "$(stat -c%s "$goodpkg")" "$(sha256sum "$goodpkg" | cut -d' ' -f1)" >> Packages.new
-            rm -f control control.tar.gz
+            rm -rf control control.tar.gz
           done
           
           mv Packages.new Packages
