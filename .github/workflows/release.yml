@@ -82,12 +82,17 @@ jobs:
           PACKAGE_NAME="naive-backup_${PKG_VER}_all.ipk"
           echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
           
-          echo "2.0" > debian-binary
-          tar -C staging/control --numeric-owner --owner=0 --group=0 -czf control.tar.gz control
-          tar -C staging/data --numeric-owner --owner=0 --group=0 -czf data.tar.gz usr
+          printf "2.0\n" > debian-binary
           
+          # Create control.tar.gz with numeric root ownership
+          (cd staging/control && tar --numeric-owner --owner=0 --group=0 -czf ../../control.tar.gz .)
+          
+          # Create data.tar.gz with numeric root ownership
+          (cd staging/data && tar --numeric-owner --owner=0 --group=0 -czf ../../data.tar.gz .)
+          
+          # Build .ipk as a gzipped tarball (native OpenWrt format)
           rm -f "$PACKAGE_NAME"
-          ar r "$PACKAGE_NAME" debian-binary control.tar.gz data.tar.gz
+          tar --numeric-owner --owner=0 --group=0 -czf "$PACKAGE_NAME" debian-binary control.tar.gz data.tar.gz
 
       - name: Upload .ipk artifact
         uses: actions/upload-artifact@v4
