@@ -164,7 +164,7 @@ jobs:
           rm -f Packages Packages.gz
           for pkg in *.ipk; do
             [ -f "$pkg" ] || continue
-            ar x "$pkg" control.tar.gz
+            tar -xzOf "$pkg" control.tar.gz > control.tar.gz
             tar -xzOf control.tar.gz control >> Packages
             printf "Filename: %s\nSize: %s\nSHA256sum: %s\n\n" \
               "$pkg" "$(stat -c%s "$pkg")" "$(sha256sum "$pkg" | cut -d' ' -f1)" >> Packages
