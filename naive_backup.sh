@@ -1,10 +1,12 @@
-#!/bin/bash
+#!/bin/sh
 
 trap cleanup EXIT
 
 cleanup() {
-    [[ -f "$TMP_FILE1" ]] && rm -f "$TMP_FILE1" && echo "[-]--> $TMP_FILE1"
-    [[ -f "$TMP_FILE2" ]] && rm -f "$TMP_FILE2" && echo "[-]--> $TMP_FILE2"
+    [ -f "$TMP_FILE1" ] && rm -f "$TMP_FILE1" && echo "[-]--> $TMP_FILE1"
+    [ -f "$TMP_FILE2" ] && rm -f "$TMP_FILE2" && echo "[-]--> $TMP_FILE2"
+    [ -f "$TMP_FILE2.diff" ] && rm -f "$TMP_FILE2.diff" && echo "[-]--> $TMP_FILE2.diff"
+    [ -f "$CONFIGS_FILE" ] && rm -f "$CONFIGS_FILE" && echo "[-]--> $CONFIGS_FILE"
 }
 
 persist_check() {
@@ -32,8 +34,8 @@ check_content_work_dir() {
     elif [ ! -d "$CONTENT_WORK_DIR" ]; then
         echo "'$CONTENT_WORK_DIR' expected to be a directory." >&2
         return 1;
-    elif [ ! -O "$CONTENT_WORK_DIR" ]; then
-        echo "'$CONTENT_WORK_DIR' should be owned by '$(whoami)' user." >&2
+    elif [ "$(stat -L -c "%U" "$CONTENT_WORK_DIR")" != "$(id -un)" ]; then
+        echo "'$CONTENT_WORK_DIR' should be owned by '$(id -un)' user." >&2
         return 1;
     elif [ "$(stat -L -c "0%a" "$CONTENT_WORK_DIR")" != "0700" ]; then
         echo "'$CONTENT_WORK_DIR' should have 0700 permissions set." >&2
@@ -47,7 +49,7 @@ process_files_directory() {
         return 1
     fi
     echo "[d]--> $1" >&3
-    find "$1" -maxdepth 1 -regex ".*\(lst\|sh\)" | while read -r SNIP; do
+    find "$1" ! -name "$(basename "$1")" -prune \( -name "*.lst" -o -name "*.sh" \) | while read -r SNIP; do
     TYPE=$(echo "$SNIP" | sed -n -e "s/.*\(lst\|sh\)/\1/p")
         if [ "$TYPE" = "sh" ]; then
             process_files_executable "$SNIP" "$2" "--"
@@ -77,7 +79,7 @@ process_files_plain() {
     fi
 
     echo "[*]$3--> $1" >&3
-    local HAS_ERRORS=false
+    HAS_ERRORS=false
     
     while IFS= read -r LINE; do
         [ -z "$LINE" ] || find "$LINE" -follow -type f || HAS_ERRORS=true
@@ -151,16 +153,18 @@ process_content() {
         [ "$LASTFULL" ] && echo "[$2]--> Last full: full-$LASTFULL" || echo "[$2]--> No full version" >&3
         
         if [ "$LASTBASE" ] && [ "$LASTFULL" ]; then
-	    diff -r <(bunzip2 -c "$CONTENT_WORK_DIR/$2-$LASTBASE.sql.bz2") <(cat "$TMP_FILE1") > "$TMP_FILE2"
-	    DIFFLINES=$(wc -l < "$TMP_FILE2")
+	    bunzip2 -c "$CONTENT_WORK_DIR/$2-$LASTBASE.sql.bz2" > "$TMP_FILE2"
+	    diff -r "$TMP_FILE2" "$TMP_FILE1" > "$TMP_FILE2.diff"
+	    DIFFLINES=$(wc -l < "$TMP_FILE2.diff")
             echo "[$2]--> Changed lines/base: $DIFFLINES" >&3
 
             if [ "$DIFFLINES" -gt 0 ] && [ "$LASTBASE" != "full-$LASTFULL" ]; then
-                diff -r <(bunzip2 -c "$CONTENT_WORK_DIR/$2-full-$LASTFULL.sql.bz2") <(cat "$TMP_FILE1") > "$TMP_FILE2"
-		DIFFLINES=$(wc -l < "$TMP_FILE2")
+                bunzip2 -c "$CONTENT_WORK_DIR/$2-full-$LASTFULL.sql.bz2" > "$TMP_FILE2"
+                diff -r "$TMP_FILE2" "$TMP_FILE1" > "$TMP_FILE2.diff"
+		DIFFLINES=$(wc -l < "$TMP_FILE2.diff")
                 echo "[$2]--> Changed lines/full: $DIFFLINES" >&3
             fi
-	    DIFFSIZE=$(wc -c < "$TMP_FILE2")
+	    DIFFSIZE=$(wc -c < "$TMP_FILE2.diff")
 	    BASESIZE=$(wc -c < "$TMP_FILE1")
 	    SIZEDIFF=$(( DIFFSIZE * 100 / BASESIZE ))
             TOO_BIG="no"; [ "$SIZEDIFF" -gt "$SIZE_THRESHOLD" ] && TOO_BIG="yes"
@@ -192,7 +196,7 @@ process_content() {
         
         elif [ "$DIFFLINES" -gt 0 ]; then
 
-            BASETYPE=${LASTBASE/-*/}
+            BASETYPE=$(echo "$LASTBASE" | sed 's/-.*//')
 
             OLDFILEBASE="$CONTENT_WORK_DIR/$2-$LASTBASE.sql.bz2"
             # shellcheck disable=SC2015
@@ -200,7 +204,7 @@ process_content() {
 
             (umask 077; bzip2 <"$TMP_FILE1" > "$CONTENT_WORK_DIR/$2-base-$BAKDATE.sql.bz2") || return 1
 
-            bzip2 < "$TMP_FILE2" | encrypt_and_sign | $PERSIST_FILE "$PREFIX-$2-inc-$LASTFULL-$BAKDATE.diff.bz2.gpg" || return 1
+            bzip2 < "$TMP_FILE2.diff" | encrypt_and_sign | $PERSIST_FILE "$PREFIX-$2-inc-$LASTFULL-$BAKDATE.diff.bz2.gpg" || return 1
 
             # shellcheck disable=SC2015
 	    [ "$BASETYPE" = "base" ] && rm -f "$OLDFILEBASE.bak" || true
@@ -262,9 +266,6 @@ fi
 
 TO_FIND=${1:-'[^/]*'}
 
-CONF_REGEX_FIND=".*/\([0-9]+-\)*\(content\|files\)-\($TO_FIND\)\.\(lst\|d\|sh\)"
-CONF_REGEX_SED=".*/\([0-9]\+-\)*\(content\|files\)-\($TO_FIND\)\.\(lst\|d\|sh\)"
-
 if [ -f "$CONFDIR/settings.conf" ]; then
     # shellcheck disable=SC1090,SC1091
     . "$CONFDIR/settings.conf"
@@ -272,13 +273,13 @@ fi
 
 SIZE_THRESHOLD=${SIZE_THRESHOLD:=15}
 
-PREFIX=${PREFIX:=backup-$(cat /proc/sys/kernel/hostname)}
+PREFIX=${PREFIX:=backup-$(uname -n)}
 
 BAKDATE=$(date +%F)
 
 set -o pipefail
-! type persist_file_custom >/dev/null 2>&1; HAS_CUSTOM_PERSIST_FILE=$?
-! type get_file_custom >/dev/null 2>&1; HAS_CUSTOM_GET_FILE=$?
+! command -v persist_file_custom >/dev/null 2>&1; HAS_CUSTOM_PERSIST_FILE=$?
+! command -v get_file_custom >/dev/null 2>&1; HAS_CUSTOM_GET_FILE=$?
 
 if [ $HAS_CUSTOM_PERSIST_FILE -ne $HAS_CUSTOM_GET_FILE ]; then
     echo "You should specify both 'persist_file_custom' and 'get_file_custom'" >&2
@@ -288,7 +289,7 @@ fi
 if [ $HAS_CUSTOM_PERSIST_FILE -ne 0 ]; then
     PERSIST_FILE="persist_file_custom"
     GET_FILE="get_file_custom"
-    ! type persister_check_custom >/dev/null 2>&1 || persister_check_custom || exit 2
+    ! command -v persister_check_custom >/dev/null 2>&1 || persister_check_custom || exit 2
 else	
     PERSIST_FILE="persist_file"
     GET_FILE="get_file"
@@ -300,30 +301,44 @@ if [ -z "$ENCRYPT_RECIPIENT" ]; then
     exit 2
 fi
 
-CONFIGS=$(find "$CONFDIR" -maxdepth 1 -regex "$CONF_REGEX_FIND" | sort)
+CONFIGS_FILE=$(mktemp -t naive_backup_configs.XXXXXXXX) || exit 2
+TMP_FILE1=$(mktemp -t naive_backup.XXXXXXXX) || exit 2
+TMP_FILE2=$(mktemp -t naive_backup.XXXXXXXX) || exit 2
 
-DUPES=$(echo "$CONFIGS" | sed -n -e "s#$CONF_REGEX_SED#\3#p" | sort | uniq --repeated)
+# Portable find to match definitions: (number-)?(content|files)-(name).(lst|d|sh)
+find "$CONFDIR" ! -name "$(basename "$CONFDIR")" -prune \
+    \( -name "*-content-*.sh" -o -name "*-files-*.lst" -o -name "*-files-*.d" -o -name "*-files-*.sh" \
+       -o -name "content-*.sh" -o -name "files-*.lst" -o -name "files-*.d" -o -name "files-*.sh" \) \
+    | sort > "$CONFIGS_FILE"
 
-HAS_ERRORS=false
-
-if [ -z "$CONFIGS" ]; then
+if [ ! -s "$CONFIGS_FILE" ]; then
     echo "Nothing to backup" >&2
     exit 2
 fi
 
+# Find duplicates
+DUPES=$(sed -n -e "s#.*/\([0-9]\+-\)*\(content\|files\)-\(.*\)\.\(lst\|d\|sh\)#\3#p" "$CONFIGS_FILE" | sort | uniq --repeated)
 
-TMP_FILE1=$(mktemp -t naive_backup.XXXXXXXX) || exit 2
-TMP_FILE2=$(mktemp -t naive_backup.XXXXXXXX) || exit 2
+HAS_ERRORS=false
 
-echo "$CONFIGS" | while IFS= read -r CNF; do
-    NAME=$(echo "$CNF" | sed -n -e "s#$CONF_REGEX_SED#\3#p")
-    IS_DUPE=$(echo "$DUPES" | grep "$NAME")
+while IFS= read -r CNF; do
+    # Extract name, type, and extension using portable sed
+    NAME=$(echo "$CNF" | sed -n -e "s#.*/\([0-9]\+-\)*\(content\|files\)-\(.*\)\.\(lst\|d\|sh\)#\3#p")
+    TYPE=$(echo "$CNF" | sed -n -e "s#.*/\([0-9]\+-\)*\(content\|files\)-\(.*\)\.\(lst\|d\|sh\)#\2#p")
+    EXT=$(echo "$CNF" | sed -n -e "s#.*/\([0-9]\+-\)*\(content\|files\)-\(.*\)\.\(lst\|d\|sh\)#\4#p")
+
+    # If user provided a specific definition name to run, skip others
+    if [ -n "$TO_FIND" ] && [ "$TO_FIND" != "[^/]*" ]; then
+        if [ "$NAME" != "$TO_FIND" ]; then
+            continue
+        fi
+    fi
+
+    IS_DUPE=$(echo "$DUPES" | grep -w "$NAME")
     if [ -n "$IS_DUPE" ]; then
         echo "$CNF is ignored due to duplicate definition '$NAME'" >&2
 	HAS_ERRORS=true
     else
-	EXT=$(echo "$CNF" | sed -n -e "s#$CONF_REGEX_SED#\4#p")
-	TYPE=$(echo "$CNF" | sed -n -e "s#$CONF_REGEX_SED#\2#p")
         echo "[$NAME]--> ..."
         if process_and_store_single_definition "$CNF" "$NAME" "$TYPE" "$EXT" 3>&1; then
             echo "[$NAME]--> SUCCESS"
@@ -332,9 +347,8 @@ echo "$CONFIGS" | while IFS= read -r CNF; do
             HAS_ERRORS=true
         fi
     fi
-    if [ "$HAS_ERRORS" = true ]; then
-        false
-    fi
+done < "$CONFIGS_FILE"
 
-done
-
+if [ "$HAS_ERRORS" = "true" ]; then
+    exit 1
+fi
