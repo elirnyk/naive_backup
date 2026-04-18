@@ -161,23 +161,33 @@ jobs:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           # Manual opkg-generate-index implementation
+          # Only process newly built IPK, don't touch existing ones in gh-pages
+          PKGNAME="${{ needs.build-ipk.outputs.package_name }}"
+          [ -z "$PKGNAME" ] && echo "No package name" && exit 1
+          
           mkdir -p gh-pages/opkg
-          mv dist/ipk/*.ipk gh-pages/opkg/
+          mv "dist/ipk/$PKGNAME" gh-pages/opkg/
           cd gh-pages/opkg
           
-          NEW_PKGS=$(ls -1 *.ipk 2>/dev/null || echo "")
-          [ -z "$NEW_PKGS" ] && echo "No new IPK packages found" && exit 0
+          echo "Processing package: $PKGNAME"
+          rm -f control.tar.gz control
+          ar x "$PKGNAME" control.tar.gz || { echo "Failed to extract control.tar.gz"; exit 1; }
+          tar -xzf control.tar.gz control || { echo "Failed to extract control"; exit 1; }
+          cat control >> Packages
+          printf "Filename: %s\nSize: %s\nSHA256sum: %s\n\n" \
+            "$PKGNAME" "$(stat -c%s "$PKGNAME")" "$(sha256sum "$PKGNAME" | cut -d' ' -f1)" >> Packages
+          rm -f control control.tar.gz
           
-          rm -f Packages Packages.gz
-          for pkg in *.ipk; do
-            [ -f "$pkg" ] || continue
-            echo "Processing package: $pkg"
-            rm -f control.tar.gz
-            ar x "$pkg" control.tar.gz || { echo "Failed to extract control.tar.gz from $pkg"; exit 1; }
-            tar -xzf control.tar.gz control || { echo "Failed to extract control from tarball"; ls -la; exit 1; }
+          # Append existing packages
+          for oldpkg in *.ipk; do
+            [ "$oldpkg" = "$PKGNAME" ] && continue
+            [ -f "$oldpkg" ] || continue
+            echo "Keeping existing: $oldpkg"
+            ar x "$oldpkg" control.tar.gz || continue
+            tar -xzf control.tar.gz control || continue
             cat control >> Packages
             printf "Filename: %s\nSize: %s\nSHA256sum: %s\n\n" \
-              "$pkg" "$(stat -c%s "$pkg")" "$(sha256sum "$pkg" | cut -d' ' -f1)" >> Packages
+              "$oldpkg" "$(stat -c%s "$oldpkg")" "$(sha256sum "$oldpkg" | cut -d' ' -f1)" >> Packages
             rm -f control control.tar.gz
           done
           gzip -c Packages > Packages.gz
