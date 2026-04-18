@@ -85,18 +85,18 @@ jobs:
           printf "2.0\n" > debian-binary
           
           # Create control.tar.gz with numeric root ownership
-(cd staging/control && tar --numeric-owner --owner=0 --group=0 -czf ../../control.tar.gz .)
-           
-           # Create data.tar.gz with numeric root ownership
-           (cd staging/data && tar --numeric-owner --owner=0 --group=0 -czf ../../data.tar.gz .)
-           
-           # Build .ipk as tar.gz (native OpenWrt format used by official repos)
-           rm -f "$PACKAGE_NAME"
-           tar --numeric-owner --owner=0 --group=0 -czf "$PACKAGE_NAME" debian-binary control.tar.gz data.tar.gz
-           
-           # Verify IPK is valid
-           echo "Verifying IPK structure..."
-           file "$PACKAGE_NAME"
+          (cd staging/control && tar --numeric-owner --owner=0 --group=0 -czf ../../control.tar.gz .)
+          
+          # Create data.tar.gz with numeric root ownership
+          (cd staging/data && tar --numeric-owner --owner=0 --group=0 -czf ../../data.tar.gz .)
+          
+          # Build .ipk as tar.gz (native OpenWrt format used by official repos)
+          rm -f "$PACKAGE_NAME"
+          tar --numeric-owner --owner=0 --group=0 -czf "$PACKAGE_NAME" debian-binary control.tar.gz data.tar.gz
+          
+          # Verify IPK is valid
+          echo "Verifying IPK structure..."
+          file "$PACKAGE_NAME"
 
       - name: Upload .ipk artifact
         uses: actions/upload-artifact@v4
