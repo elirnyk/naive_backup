@@ -161,7 +161,7 @@ jobs:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           # Manual opkg-generate-index implementation
-          # Only process newly built IPK, don't touch existing ones in gh-pages
+          # Only process newly built IPK
           VERSION="${{ github.ref_name }}"
           PKG_VER="${VERSION#v}"
           PKGNAME="naive-backup_${PKG_VER}_all.ipk"
@@ -171,27 +171,30 @@ jobs:
           mv "dist/ipk/$PKGNAME" gh-pages/opkg/
           cd gh-pages/opkg
           
+          # Process only new package
           echo "Processing package: $PKGNAME"
           rm -f control.tar.gz control
           ar x "$PKGNAME" control.tar.gz || { echo "Failed to extract control.tar.gz"; exit 1; }
           tar -xzf control.tar.gz control || { echo "Failed to extract control"; exit 1; }
-          cat control >> Packages
+          cat control > Packages.new
           printf "Filename: %s\nSize: %s\nSHA256sum: %s\n\n" \
-            "$PKGNAME" "$(stat -c%s "$PKGNAME")" "$(sha256sum "$PKGNAME" | cut -d' ' -f1)" >> Packages
+            "$PKGNAME" "$(stat -c%s "$PKGNAME")" "$(sha256sum "$PKGNAME" | cut -d' ' -f1)" >> Packages.new
           rm -f control control.tar.gz
           
-          # Append existing packages
-          for oldpkg in *.ipk; do
-            [ "$oldpkg" = "$PKGNAME" ] && continue
-            [ -f "$oldpkg" ] || continue
-            echo "Keeping existing: $oldpkg"
-            ar x "$oldpkg" control.tar.gz || continue
+          # Append only known-good existing packages (v0.1.7 and later)
+          for goodpkg in naive-backup_0.1.7_all.ipk naive-backup_0.1.8_all.ipk naive-backup_0.1.9_all.ipk; do
+            [ -f "$goodpkg" ] || continue
+            echo "Adding known-good: $goodpkg"
+            rm -f control.tar.gz control
+            ar x "$goodpkg" control.tar.gz || continue
             tar -xzf control.tar.gz control || continue
-            cat control >> Packages
+            cat control >> Packages.new
             printf "Filename: %s\nSize: %s\nSHA256sum: %s\n\n" \
-              "$oldpkg" "$(stat -c%s "$oldpkg")" "$(sha256sum "$oldpkg" | cut -d' ' -f1)" >> Packages
+              "$goodpkg" "$(stat -c%s "$goodpkg")" "$(sha256sum "$goodpkg" | cut -d' ' -f1)" >> Packages.new
             rm -f control control.tar.gz
           done
+          
+          mv Packages.new Packages
           gzip -c Packages > Packages.gz
           
           gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --detach-sign --armor -u "${{ steps.import_gpg.outputs.key_id }}" Packages
