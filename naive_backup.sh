@@ -5,7 +5,6 @@ trap cleanup EXIT
 cleanup() {
     [ -f "$TMP_FILE1" ] && rm -f "$TMP_FILE1" && echo "[-]--> $TMP_FILE1"
     [ -f "$TMP_FILE2" ] && rm -f "$TMP_FILE2" && echo "[-]--> $TMP_FILE2"
-    [ -f "$TMP_FILE2.diff" ] && rm -f "$TMP_FILE2.diff" && echo "[-]--> $TMP_FILE2.diff"
     [ -f "$CONFIGS_FILE" ] && rm -f "$CONFIGS_FILE" && echo "[-]--> $CONFIGS_FILE"
 }
 
@@ -153,18 +152,16 @@ process_content() {
         [ "$LASTFULL" ] && echo "[$2]--> Last full: full-$LASTFULL" || echo "[$2]--> No full version" >&3
         
         if [ "$LASTBASE" ] && [ "$LASTFULL" ]; then
-	    bunzip2 -c "$CONTENT_WORK_DIR/$2-$LASTBASE.sql.bz2" > "$TMP_FILE2"
-	    diff -r "$TMP_FILE2" "$TMP_FILE1" > "$TMP_FILE2.diff"
-	    DIFFLINES=$(wc -l < "$TMP_FILE2.diff")
+	    bunzip2 -c "$CONTENT_WORK_DIR/$2-$LASTBASE.sql.bz2" | diff - "$TMP_FILE1" > "$TMP_FILE2"
+	    DIFFLINES=$(wc -l < "$TMP_FILE2")
             echo "[$2]--> Changed lines/base: $DIFFLINES" >&3
 
             if [ "$DIFFLINES" -gt 0 ] && [ "$LASTBASE" != "full-$LASTFULL" ]; then
-                bunzip2 -c "$CONTENT_WORK_DIR/$2-full-$LASTFULL.sql.bz2" > "$TMP_FILE2"
-                diff -r "$TMP_FILE2" "$TMP_FILE1" > "$TMP_FILE2.diff"
-		DIFFLINES=$(wc -l < "$TMP_FILE2.diff")
+                bunzip2 -c "$CONTENT_WORK_DIR/$2-full-$LASTFULL.sql.bz2" | diff - "$TMP_FILE1" > "$TMP_FILE2"
+		DIFFLINES=$(wc -l < "$TMP_FILE2")
                 echo "[$2]--> Changed lines/full: $DIFFLINES" >&3
             fi
-	    DIFFSIZE=$(wc -c < "$TMP_FILE2.diff")
+	    DIFFSIZE=$(wc -c < "$TMP_FILE2")
 	    BASESIZE=$(wc -c < "$TMP_FILE1")
 	    SIZEDIFF=$(( DIFFSIZE * 100 / BASESIZE ))
             TOO_BIG="no"; [ "$SIZEDIFF" -gt "$SIZE_THRESHOLD" ] && TOO_BIG="yes"
@@ -204,7 +201,7 @@ process_content() {
 
             (umask 077; bzip2 <"$TMP_FILE1" > "$CONTENT_WORK_DIR/$2-base-$BAKDATE.sql.bz2") || return 1
 
-            bzip2 < "$TMP_FILE2.diff" | encrypt_and_sign | $PERSIST_FILE "$PREFIX-$2-inc-$LASTFULL-$BAKDATE.diff.bz2.gpg" || return 1
+            bzip2 < "$TMP_FILE2" | encrypt_and_sign | $PERSIST_FILE "$PREFIX-$2-inc-$LASTFULL-$BAKDATE.diff.bz2.gpg" || return 1
 
             # shellcheck disable=SC2015
 	    [ "$BASETYPE" = "base" ] && rm -f "$OLDFILEBASE.bak" || true
