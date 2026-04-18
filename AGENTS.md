@@ -11,6 +11,10 @@ shellcheck naive_backup.sh
 
 # Build Debian package
 dpkg-buildpackage -us -uc -b
+
+# Install OpenWrt (use raw.githubusercontent.com, not jeka.github.io)
+curl -LO https://raw.githubusercontent.com/elirnyk/naive_backup/gh-pages/opkg/naive-backup_<ver>_all.ipk
+opkg install naive-backup_<ver>_all.ipk
 ```
 
 ## Key Facts
