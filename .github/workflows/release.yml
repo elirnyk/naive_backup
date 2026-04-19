@@ -5,9 +5,6 @@ on:
     tags:
       - 'v*.*.*'
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build-deb:
     name: Build Debian Package
@@ -16,7 +13,7 @@ jobs:
       package_name: ${{ steps.get_filename.outputs.package_name }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Dependencies
         run: sudo apt-get update && sudo apt-get install -y devscripts debhelper build-essential
@@ -41,7 +38,7 @@ jobs:
         run: echo "package_name=$(ls *.deb)" >> $GITHUB_OUTPUT
 
       - name: Upload .deb artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: deb-package
           path: '*.deb'
@@ -53,7 +50,7 @@ jobs:
       package_name: ${{ steps.build_ipk.outputs.package_name }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Create Staging Directory
         run: |
@@ -102,7 +99,7 @@ jobs:
           file "$PACKAGE_NAME"
 
       - name: Upload .ipk artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ipk-package
           path: naive-backup_*.ipk
@@ -120,19 +117,19 @@ jobs:
           pip install pynacl
 
       - name: Checkout gh-pages branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: gh-pages
           path: gh-pages
 
       - name: Download .deb artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: deb-package
           path: dist/deb
 
       - name: Download .ipk artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ipk-package
           path: dist/ipk
@@ -271,18 +268,18 @@ jobs:
       contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Download .deb artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: deb-package
           path: .
 
       - name: Download .ipk artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ipk-package
           path: .
