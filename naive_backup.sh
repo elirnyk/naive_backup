@@ -314,7 +314,7 @@ if [ -z "$CONFIGS" ]; then
 fi
 
 # Find duplicates
-DUPES=$(echo "$CONFIGS" | sed -n -e "s#.*/\([0-9]\+-\)*\(content\|files\)-\(.*\)\.\(lst\|d\|sh\)#\3#p" | sort | uniq --repeated)
+DUPES=$(echo "$CONFIGS" | sed -n -e "s#.*/\([0-9]\+-\)*\(content\|files\)-\(.*\)\.\(lst\|d\|sh\)#\3#p" | sort | uniq -d)
 
 HAS_ERRORS=false
 
