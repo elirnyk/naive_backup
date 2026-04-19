@@ -199,7 +199,7 @@ jobs:
 
           # Sign with minisign (stored in secret)
           echo "$MINISIGN_KEY" | base64 -d > minisign.key
-          echo "" | minisign -S -s minisign.key -m Packages
+          echo "" | minisign -S -s minisign.key -m Packages -x Packages.sig
           rm -f minisign.key
           cd ../..
       
