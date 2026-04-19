@@ -227,15 +227,23 @@ jobs:
               # Write signature file (Ed + KeyID + Signature)
               sig_b64 = base64.b64encode(b'Ed' + keyid + sig).decode()
               with open('Packages.sig', 'w') as f:
-                  f.write(f'untrusted comment: usign\n{sig_b64}\n')
-              
+                  f.write(f'untrusted comment: usign signature\n{sig_b64}\n')
+
               # Update repokey.pub to ensure it matches the signing key
               pk = sk.verify_key.encode()
               pk_b64 = base64.b64encode(b'Ed' + keyid + pk).decode()
               with open('repokey.pub', 'w') as f:
-                  f.write(f'untrusted comment: naive-backup opkg repo public key\n{pk_b64}\n')
-                  
+                  f.write(f'untrusted comment: usign public key\n{pk_b64}\n')
+
               print(f'Successfully signed Packages with KeyID: {keyid.hex()}')
+
+              # Local verification test
+              try:
+                  sk.verify_key.verify(open('Packages', 'rb').read(), sig)
+                  print('Local verification successful')
+              except Exception as ve:
+                  print(f'Local verification FAILED: {ve}')
+                  sys.exit(1)
           except Exception as e:
               print(f'Error signing: {e}')
               sys.exit(1)
