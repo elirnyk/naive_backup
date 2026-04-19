@@ -85,18 +85,16 @@ First, you need to add the repository's public GPG key to your system to verify 
 
 ### For OpenWrt (OPKG)
 
-1. **Add the GPG Key:**
+1. **Add the repository signing key:**
    
    ```bash
-   curl -s "https://elirnyk.github.io/naive_backup/public.key" > /tmp/public.key
-   opkg-key add /tmp/public.key
-   rm /tmp/public.key
+   (T=$(mktemp) && trap "rm -f $T" EXIT && curl -sL https://elirnyk.github.io/naive_backup/opkg/repokey.pub -o $T && opkg-key add $T)
    ```
 
 2. **Add the Repository:** Add the following line to `/etc/opkg/customfeeds.conf`:
    
    ```
-   src/gz custom_naive_backup https://elirnyk.github.io/naive_backup/opkg
+   src/gz naive_backup https://elirnyk.github.io/naive_backup/opkg
    ```
 
 3. **Install the Package:**
@@ -105,6 +103,8 @@ First, you need to add the repository's public GPG key to your system to verify 
    opkg update
    opkg install naive-backup
    ```
+
+   > **Note:** If you encounter signature errors, disable by adding `#` before `option check_signature` in `/etc/opkg/`
 
 ### OpenWrt Dependencies
 

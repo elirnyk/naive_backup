@@ -112,7 +112,7 @@ jobs:
       contents: write
     steps:
       - name: Install Tools
-        run: sudo apt-get update && sudo apt-get install -y apt-utils gnupg
+        run: sudo apt-get update && sudo apt-get install -y apt-utils gnupg minisign
 
       - name: Checkout gh-pages branch
         uses: actions/checkout@v4
@@ -156,9 +156,9 @@ jobs:
           gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" -abs -u "${{ steps.import_gpg.outputs.key_id }}" -o Release.gpg Release
           cd ../..
 
-      - name: Update OPKG Repository
+      - name: Update OPKG Repository and Sign
         env:
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          MINISIGN_KEY: ${{ secrets.MINISIGN_KEY }}
         run: |
           # Manual opkg-generate-index implementation
           # Only process newly built IPK
@@ -196,8 +196,11 @@ jobs:
           
           mv Packages.new Packages
           gzip -c Packages > Packages.gz
-          
-          gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --detach-sign --armor -u "${{ steps.import_gpg.outputs.key_id }}" Packages
+
+          # Sign with minisign (stored in secret)
+          echo "$MINISIGN_KEY" | base64 -d > minisign.key
+          minisign -S -s minisign.key -m Packages
+          rm -f minisign.key
           cd ../..
       
       - name: Export Public GPG key
