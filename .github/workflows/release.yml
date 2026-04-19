@@ -111,11 +111,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Install Tools
-        run: sudo apt-get update && sudo apt-get install -y python3 python3-pip
-
-      - name: Install Python usign
-        run: pip install pynacl
+      - name: Install Tools and Python dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y python3 python3-pip
+          pip install pynacl
 
       - name: Checkout gh-pages branch
         uses: actions/checkout@v4
