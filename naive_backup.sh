@@ -80,7 +80,7 @@ process_files_plain() {
     HAS_ERRORS=false
     
     while IFS= read -r LINE; do
-        [ -z "$LINE" ] || find "$LINE" -follow -type f || HAS_ERRORS=true
+        [ -z "$LINE" ] || find "$LINE" -follow -type f -o -type l || HAS_ERRORS=true
     done < "$1"
 
     if [ "$HAS_ERRORS" = true ]; then
@@ -101,7 +101,7 @@ process_files_by_type() {
 
 checksum_files() {
     while read -r LINE; do
-	    if ! ([ -f "$LINE" ] && md5sum "$LINE" ) ; then
+	    if ! ([ -e "$LINE" ] && md5sum "$LINE" ) ; then
 	    echo "$LINE is not regular file" >&2
 	    return 1
 	fi
