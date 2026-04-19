@@ -112,7 +112,10 @@ jobs:
       contents: write
     steps:
       - name: Install Tools
-        run: sudo apt-get update && sudo apt-get install -y apt-utils gnupg minisign
+        run: sudo apt-get update && sudo apt-get install -y python3 python3-pip
+
+      - name: Install Python usign
+        run: pip install pynacl
 
       - name: Checkout gh-pages branch
         uses: actions/checkout@v4
@@ -197,11 +200,30 @@ jobs:
           mv Packages.new Packages
           gzip -c Packages > Packages.gz
 
-          # Sign with minisign (stored in secret)
-          # Use -l legacy format for compatibility with usign/openwrt
-          echo "$MINISIGN_KEY" | base64 -d > minisign.key
-          echo "" | minisign -l -S -s minisign.key -m Packages -x Packages.sig
-          rm -f minisign.key
+          # Sign with usign-compatible Python script
+          python3 << 'PYTHON' > /dev/null
+import base64
+import nacl.signing
+
+secret_key_b64 = """$MINISIGN_KEY""".strip()
+key_data = base64.b64decode(secret_key_b64)
+
+key_id = key_data[2:10]
+raw_secret = key_data[10:42]
+
+with open('Packages', 'rb') as f:
+    message = f.read()
+
+# Derive public key from secret and sign
+signing_key = nacl.signing.SigningKey(raw_secret)
+verify_key = signing_key.verify_key
+signature = signing_key.sign(message).signature[:64]
+
+usign_sig = b"Ed" + key_id + signature
+with open('Packages.sig', 'w') as f:
+    f.write("untrusted comment: usign\n")
+    f.write(base64.b64encode(usign_sig).decode())
+PYTHON
           cd ../..
       
       - name: Export Public GPG key
