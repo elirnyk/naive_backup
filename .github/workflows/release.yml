@@ -213,38 +213,29 @@ jobs:
           gzip -c Packages > Packages.gz
 
           # 4. Sign Packages and update repokey.pub
-          python3 -c "
+          python3 - <<EOF
           import base64, sys, nacl.signing
           try:
-          # Original KeyID from gh-pages/opkg/repokey.pub
           original_key_b64 = 'RWSdCKxoQHl6GIxSqHYdOHlKYnNNGvTLkOWLPSfFyisHTonTLARZmXCV'
           key_data = base64.b64decode(original_key_b64)
           keyid = key_data[2:10]
-          seed = base64.b64decode(sys.argv[1].strip())[10:42]
-
+          seed = base64.b64decode('$MINISIGN_KEY'.strip())[10:42]
           sk = nacl.signing.SigningKey(seed)
           with open('Packages', 'rb') as f:
-          # usign/minisign signs the raw message
           sig = sk.sign(f.read()).signature
-
-          # Write signature file (Ed + KeyID + Signature)
           sig_b64 = base64.b64encode(b'Ed' + keyid + sig).decode()
           with open('Packages.sig', 'w') as f:
           f.write(f'untrusted comment: usign signature\n{sig_b64}\n')
-
-          # Update repokey.pub to ensure it matches the original key ID
           with open('repokey.pub', 'w') as f:
           f.write('untrusted comment: naive-backup opkg repo public key\n' + original_key_b64 + '\n')
-
           print(f'Successfully signed Packages with KeyID: {keyid.hex()}')
           except Exception as e:
           print(f'Error signing: {e}')
           sys.exit(1)
-          " "$MINISIGN_KEY"
+          EOF
           # Clean up any legacy minisig files
           rm -f Packages.minisig
-          cd ../..
-      - name: Export Public GPG key
+          cd ../..      - name: Export Public GPG key
         run: |
           gpg --export --armor "${{ steps.import_gpg.outputs.key_id }}" > gh-pages/public.key
 
