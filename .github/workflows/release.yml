@@ -200,28 +200,7 @@ jobs:
           gzip -c Packages > Packages.gz
 
           # Sign with usign-compatible Python script
-          cat > sign_usign.py << 'EOF'
-import base64
-import nacl.signing
-import sys
-
-key_data = base64.b64decode(sys.argv[1])
-
-key_id = key_data[2:10]
-raw_secret = key_data[10:42]
-
-with open('Packages', 'rb') as f:
-    message = f.read()
-
-signing_key = nacl.signing.SigningKey(raw_secret)
-signature = signing_key.sign(message).signature[:64]
-
-usign_sig = b'Ed' + key_id + signature
-with open('Packages.sig', 'w') as f:
-    f.write('untrusted comment: usign\n')
-    f.write(base64.b64encode(usign_sig).decode())
-EOF
-          python3 sign_usign.py "$MINISIGN_KEY"
+          python3 -c 'import base64,nacl.signing,sys,os; k=base64.b64decode(sys.argv[1]); sid=k[2:10]; rs=k[10:42]; m=open("Packages","rb").read(); sk=nacl.signing.SigningKey(rs); s=sk.sign(m).signature[:64]; open("Packages.sig","w").write("untrusted comment: usign\n"+base64.b64encode(b"Ed"+sid+s).decode())' "$MINISIGN_KEY"
           rm -f sign_usign.py
           cd ../..
       
