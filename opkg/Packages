@@ -55,6 +55,6 @@ Architecture: all
 Maintainer: Gemini CLI <gemini-cli@google.com>
 Description: A simple shell-based backup script.
 Filename: naive-backup_0.1.32_all.ipk
-Size: 3973
-SHA256sum: 048a6e3ae9dfaa2bbb7bde067627659bcde884cea232d8d5266ae200c104cd12
+Size: 3974
+SHA256sum: 35d5b9de81d92c8c205776c5215cb2468e6de39cf491a04c15d943277259f7fd
 
