@@ -200,13 +200,12 @@ jobs:
           gzip -c Packages > Packages.gz
 
           # Sign with usign-compatible Python script
-          python3 -c "
+          cat > sign_usign.py << 'EOF'
 import base64
 import nacl.signing
-import os
+import sys
 
-secret_key_b64 = os.environ.get('MINISIGN_KEY', '').strip()
-key_data = base64.b64decode(secret_key_b64)
+key_data = base64.b64decode(sys.argv[1])
 
 key_id = key_data[2:10]
 raw_secret = key_data[10:42]
@@ -221,7 +220,9 @@ usign_sig = b'Ed' + key_id + signature
 with open('Packages.sig', 'w') as f:
     f.write('untrusted comment: usign\n')
     f.write(base64.b64encode(usign_sig).decode())
-"
+EOF
+          python3 sign_usign.py "$MINISIGN_KEY"
+          rm -f sign_usign.py
           cd ../..
       
       - name: Export Public GPG key
