@@ -200,7 +200,7 @@ jobs:
           gzip -c Packages > Packages.gz
 
           # Sign with usign-compatible Python script
-          python3 -c 'import base64,nacl.signing,sys,os; k=base64.b64decode(sys.argv[1]); sid=k[2:10]; rs=k[10:42]; m=open("Packages","rb").read(); sk=nacl.signing.SigningKey(rs); s=sk.sign(m).signature[:64]; open("Packages.sig","w").write("untrusted comment: usign\n"+base64.b64encode(b"Ed"+sid+s).decode())' "$MINISIGN_KEY"
+          python3 -c 'import base64,sys; from nacl.bindings import crypto_sign,crypto_sign_BYTES; k=base64.b64decode(sys.argv[1]); sid=k[2:10]; sk=k[10:42]; m=open("Packages","rb").read(); s=crypto_sign(m,sk)[:crypto_sign_BYTES]; open("Packages.sig","w").write("untrusted comment: usign\n"+base64.b64encode(b"Ed"+sid+s).decode())' "$MINISIGN_KEY"
           rm -f sign_usign.py
           cd ../..
       
