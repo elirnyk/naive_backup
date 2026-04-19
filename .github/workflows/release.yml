@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*.*.*'
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-deb:
     name: Build Debian Package
@@ -288,10 +291,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          gh release delete "${{ github.ref_name }}" --yes 2>/dev/null || true
           gh release create "${{ github.ref_name }}" \
             *.deb \
             *.ipk \
             --title "Release ${{ github.ref_name }}" \
-            --generate-notes \
-            --clobber
+            --generate-notes
 
