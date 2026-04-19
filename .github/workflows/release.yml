@@ -47,7 +47,7 @@ jobs:
     name: Build OpenWrt Package (manual)
     runs-on: ubuntu-latest
     outputs:
-      package_name: ${{ steps.get_filename.outputs.package_name }}
+      package_name: ${{ steps.build_ipk.outputs.package_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -161,48 +161,88 @@ jobs:
       - name: Update OPKG Repository and Sign
         env:
           MINISIGN_KEY: ${{ secrets.MINISIGN_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Manual opkg-generate-index implementation
-          # Only process newly built IPK
+          mkdir -p gh-pages/opkg
           VERSION="${{ github.ref_name }}"
           PKG_VER="${VERSION#v}"
           PKGNAME="naive-backup_${PKG_VER}_all.ipk"
-          [ -z "$PKGNAME" ] && echo "No package name" && exit 1
           
-          mkdir -p gh-pages/opkg
-          mv "dist/ipk/$PKGNAME" gh-pages/opkg/
+          # 1. Download all previous IPK packages from GitHub Releases to ensure a complete repository
+          echo "Syncing previous .ipk packages from GitHub Releases..."
+          gh release list --limit 100 | awk '{print $1}' | while read -r tag; do
+            gh release download "$tag" -p "*.ipk" -D gh-pages/opkg --clobber 2>/dev/null || true
+          done
+
+          # 2. Move the newly built package
+          mv "dist/ipk/$PKGNAME" gh-pages/opkg/ 2>/dev/null || true
+          
           cd gh-pages/opkg
           
-          # Process only new package
-          echo "Processing package: $PKGNAME"
-          rm -rf control.tar.gz control/
-          tar -xzf "$PKGNAME" control.tar.gz || { echo "Failed to extract control.tar.gz"; exit 1; }
-          tar -xzf control.tar.gz 2>/dev/null || { echo "Failed to extract control"; exit 1; }
-          [ -f control ] && cat control > Packages.new || cat control/control > Packages.new
-          printf "Filename: %s\nSize: %s\nSHA256sum: %s\n\n" \
-            "$PKGNAME" "$(stat -c%s "$PKGNAME")" "$(sha256sum "$PKGNAME" | cut -d' ' -f1)" >> Packages.new
-          rm -rf control control.tar.gz
-          
-          # Append only known-good existing packages (v0.1.7 and later)
-          for goodpkg in naive-backup_0.1.7_all.ipk naive-backup_0.1.8_all.ipk naive-backup_0.1.9_all.ipk; do
-            [ -f "$goodpkg" ] || continue
-            echo "Adding known-good: $goodpkg"
-            rm -rf control.tar.gz control/
-            tar -xzf "$goodpkg" control.tar.gz || continue
-            tar -xzf control.tar.gz 2>/dev/null || continue
-            [ -f control ] && cat control >> Packages.new || cat control/control >> Packages.new
+          # 3. Generate Packages file from ALL .ipk files in the directory
+          echo "Generating Packages index..."
+          rm -f Packages Packages.gz Packages.sig
+          for pkg in *.ipk; do
+            [ -f "$pkg" ] || continue
+            echo "Indexing $pkg..."
+            # Extract control file
+            rm -rf control control.tar.gz
+            tar -xzf "$pkg" control.tar.gz 2>/dev/null || continue
+            tar -xzf control.tar.gz ./control 2>/dev/null || tar -xzf control.tar.gz control 2>/dev/null || true
+            
+            # Append to Packages
+            if [ -f control ]; then
+              cat control >> Packages
+            elif [ -f control/control ]; then
+              cat control/control >> Packages
+            fi
             printf "Filename: %s\nSize: %s\nSHA256sum: %s\n\n" \
-              "$goodpkg" "$(stat -c%s "$goodpkg")" "$(sha256sum "$goodpkg" | cut -d' ' -f1)" >> Packages.new
+              "$pkg" "$(stat -c%s "$pkg")" "$(sha256sum "$pkg" | cut -d' ' -f1)" >> Packages
             rm -rf control control.tar.gz
           done
           
-          mv Packages.new Packages
           gzip -c Packages > Packages.gz
 
-          # Sign with usign-compatible Python script
-          python3 -c "import base64,sys; k=base64.b64decode(sys.argv[1]); ki=k[2:10]; rs=k[10:42]; rs[0]&=248; rs[31]&=127; rs[31]|=64; s=__import__('nacl').signing.Sign(rs, encoder=__import__('nacl').encoding.RawEncoder).sign(open('Packages','rb').read()).sig[:64]; open('Packages.sig','w').write('untrusted comment: usign\\n'+base64.b64encode(b'Ed'+ki+s).decode())" "$MINISIGN_KEY"
+          # 4. Sign Packages and update repokey.pub
+          python3 -c "
+          import base64, sys, nacl.signing
+          try:
+              key_data = sys.argv[1].strip()
+              # Handle keys with 'untrusted comment' headers
+              lines = key_data.splitlines()
+              b64_part = lines[1] if len(lines) > 1 and 'untrusted comment' in lines[0] else lines[0]
+              raw = base64.b64decode(b64_part)
+              
+              if len(raw) < 42: # Ed(2) + KeyID(8) + Seed(32)
+                  raise ValueError(f'Invalid key length: {len(raw)} bytes')
+              
+              keyid = raw[2:10]
+              seed = raw[10:42]
+              sk = nacl.signing.SigningKey(seed)
+              
+              with open('Packages', 'rb') as f:
+                  # usign/minisign signs the raw message
+                  sig = sk.sign(f.read()).signature
+              
+              # Write signature file (Ed + KeyID + Signature)
+              sig_b64 = base64.b64encode(b'Ed' + keyid + sig).decode()
+              with open('Packages.sig', 'w') as f:
+                  f.write(f'untrusted comment: usign\n{sig_b64}\n')
+              
+              # Update repokey.pub to ensure it matches the signing key
+              pk = sk.verify_key.encode()
+              pk_b64 = base64.b64encode(b'Ed' + keyid + pk).decode()
+              with open('repokey.pub', 'w') as f:
+                  f.write(f'untrusted comment: naive-backup opkg repo public key\n{pk_b64}\n')
+                  
+              print(f'Successfully signed Packages with KeyID: {keyid.hex()}')
+          except Exception as e:
+              print(f'Error signing: {e}')
+              sys.exit(1)
+          " "$MINISIGN_KEY"
+          # Clean up any legacy minisig files
+          rm -f Packages.minisig
           cd ../..
-      
       - name: Export Public GPG key
         run: |
           gpg --export --armor "${{ steps.import_gpg.outputs.key_id }}" > gh-pages/public.key
@@ -252,5 +292,6 @@ jobs:
             *.deb \
             *.ipk \
             --title "Release ${{ github.ref_name }}" \
-            --generate-notes
+            --generate-notes \
+            --clobber
 
