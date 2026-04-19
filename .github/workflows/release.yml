@@ -63,7 +63,7 @@ jobs:
           cat << EOF > staging/control/control
           Package: naive-backup
           Version: ${VERSION#v}
-          Depends: busybox, findutils, coreutils-stat, coreutils-sort, tar, gnupg, sed
+          Depends: bzip2, coreutils-stat, gnupg
           Architecture: all
           Maintainer: Gemini CLI <gemini-cli@google.com>
           Description: A simple shell-based backup script.

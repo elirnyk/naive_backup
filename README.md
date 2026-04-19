@@ -99,6 +99,16 @@ First, you need to add the repository's public GPG key to your system to verify 
     opkg install naive-backup
     ```
 
+### OpenWrt Dependencies
+
+The package requires only 3 external packages beyond busybox:
+
+-   **bzip2**: Used for compressing incremental content-based backups
+-   **coreutils-stat**: GNU stat with format support (`%A %U %G %F`) used in checksums
+-   **gnupg**: Encryption and signing of backup archives
+
+All other utilities (sed, sort, find, tar, md5sum) are provided by busybox.
+
 ## Usage
 
 The `naive-backup` script is run with a configuration directory. By default, it uses `/etc/naivebackup`.
