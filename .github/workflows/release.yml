@@ -182,8 +182,12 @@ jobs:
           # 3. Generate Packages file from ALL .ipk files in the directory
           echo "Generating Packages index..."
           rm -f Packages Packages.gz Packages.sig
+          # Use a temporary directory for unique package indexing
+          mkdir -p idx_tmp
           for pkg in *.ipk; do
             [ -f "$pkg" ] || continue
+            # Avoid duplicate indexing if same filename exists (e.g. from gh release download)
+            [ -f "idx_tmp/$pkg.done" ] && continue
             echo "Indexing $pkg..."
             # Extract control file
             rm -rf control control.tar.gz
@@ -199,7 +203,12 @@ jobs:
             printf "Filename: %s\nSize: %s\nSHA256sum: %s\n\n" \
               "$pkg" "$(stat -c%s "$pkg")" "$(sha256sum "$pkg" | cut -d' ' -f1)" >> Packages
             rm -rf control control.tar.gz
+            touch "idx_tmp/$pkg.done"
           done
+          rm -rf idx_tmp
+          
+          # Remove any potential triple newlines and ensure it ends with a single newline after the last blank line
+          sed -i '/^$/N;/^\n$/D' Packages
           
           gzip -c Packages > Packages.gz
 
