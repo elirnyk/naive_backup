@@ -311,7 +311,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: publish
     container:
-      image: openwrt/rootfs:latest
+      image: openwrt/rootfs:x86_64-22.03.6
       options: --privileged
     steps:
       - name: Setup OpenWrt
