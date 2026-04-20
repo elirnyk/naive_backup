@@ -244,8 +244,8 @@ jobs:
           
           gzip -c Packages > Packages.gz
 
-          # 4. Sign Packages with usign
-          usign -S -m Packages -s repokey.sec -x Packages.sig
+          # 4. Sign Packages with usign (key is in workspace root)
+          usign -S -m Packages -s ../../repokey.sec -x Packages.sig
           cd ../..
 
       - name: Export Public GPG key
