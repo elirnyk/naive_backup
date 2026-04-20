@@ -259,10 +259,12 @@ jobs:
           with open('repokey.sec', 'r') as f:
               lines = f.read().strip().split('\n')
           key_data = base64.b64decode(lines[1])
-          pubkey_32 = key_data[-32:]
+          fingerprint = key_data[32:40]
+          pubkey_raw = key_data[72:104]
+          pub_struct = b'Ed' + fingerprint + pubkey_raw
           with open('gh-pages/opkg/repokey.pub', 'w') as f:
               f.write('untrusted comment: public key\n')
-              f.write(base64.b64encode(pubkey_32).decode() + '\n')
+              f.write(base64.b64encode(pub_struct).decode() + '\n')
           print("Exported public key")
           EOF
 
