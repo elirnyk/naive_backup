@@ -322,7 +322,7 @@ jobs:
         run: |
           opkg install curl usign bash coreutils-base64 xxd
 
-- name: Test OPKG installation
+      - name: Test OPKG installation
         run: |
           T=$(mktemp)
           curl -sL https://elirnyk.github.io/naive_backup/opkg/repokey.pub -o $T
