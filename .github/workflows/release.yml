@@ -309,7 +309,7 @@ jobs:
   test-opkg:
     name: Test OPKG Installation
     runs-on: ubuntu-latest
-    needs: publish-pages
+    needs: publish
     steps:
       - name: Install Docker
         run: |
