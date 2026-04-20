@@ -114,7 +114,16 @@ jobs:
       - name: Install build deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake
+          sudo apt-get install -y cmake pkg-config
+
+      - name: Build json-c
+        run: |
+          cd /tmp
+          git clone --depth 1 https://github.com/json-c/json-c.git
+          cd json-c
+          mkdir build && cd build
+          cmake .. -DBUILD_STATIC=OFF -DBUILD_TESTING=OFF && make
+          sudo make install
 
       - name: Build libubox
         run: |
@@ -124,6 +133,7 @@ jobs:
           mkdir build && cd build
           cmake .. && make
           sudo make install
+          sudo ldconfig
 
       - name: Build usign
         run: |
