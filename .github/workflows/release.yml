@@ -306,3 +306,40 @@ jobs:
             --title "Release ${{ github.ref_name }}" \
             --generate-notes
 
+  test-opkg:
+    name: Test OPKG Installation
+    runs-on: ubuntu-latest
+    needs: publish-pages
+    steps:
+      - name: Install Docker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker.io
+
+      - name: Run OpenWrt container and test
+        run: |
+          # Pull OpenWrt container
+          docker pull openwrt/rootfs:x86_64
+
+          # Run test in container
+          docker run --rm openwrt/rootfs:x86_64 sh -c '
+            # Install usign for verification
+            opkg update || true
+            opkg install usign || apk add usign 2>/dev/null || true
+
+            # Add repo key
+            (T=$(mktemp) && trap "rm -f \$T" EXIT && curl -sL https://elirnyk.github.io/naive_backup/opkg/repokey.pub -o \$T && opkg-key add \$T)
+
+            # Add repo
+            echo "src/gz naive_backup https://elirnyk.github.io/naive_backup/opkg" > /etc/opkg/customfeeds.conf
+
+            # Test update
+            opkg update
+
+            # Test install
+            opkg install naive-backup
+
+            # Verify installed
+            which naive_backup.sh && echo "SUCCESS: naive-backup installed"
+          '
+
