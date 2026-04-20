@@ -310,14 +310,24 @@ jobs:
     name: Test OPKG Installation
     runs-on: ubuntu-latest
     needs: publish
+    container:
+      image: openwrt/rootfs:x86_64
+      options: --privileged
     steps:
       - name: Test OPKG installation
         run: |
-          # Create a minimal test script and run via curl from router
-          # This tests network connectivity and repo structure
-          echo "Testing repo availability..."
-          curl -sI https://elirnyk.github.io/naive_backup/opkg/Packages.gz | head -1
-          curl -sI https://elirnyk.github.io/naive_backup/opkg/Packages.sig | head -1
-          curl -sI https://elirnyk.github.io/naive_backup/opkg/repokey.pub | head -1
-          echo "Repo files available - manual test required on router with: opkg update"
+          # Add repo key
+          (T=$(mktemp) && trap "rm -f $T" EXIT && curl -sL https://elirnyk.github.io/naive_backup/opkg/repokey.pub -o $T && opkg-key add $T)
+
+          # Add repo
+          echo "src/gz naive_backup https://elirnyk.github.io/naive_backup/opkg" > /etc/opkg/customfeeds.conf
+
+          # Test update
+          opkg update
+
+          # Test install
+          opkg install naive-backup
+
+          # Verify installed
+          which naive_backup.sh && echo "SUCCESS: naive-backup installed"
 
