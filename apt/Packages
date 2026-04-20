@@ -250,3 +250,21 @@ Homepage: https://github.com/jeka/naive_backup
 Description: A simple shell-based backup script
  A lightweight backup utility that uses GPG for encryption and tar/bzip2 for archiving.
 
+Package: naive-backup
+Architecture: all
+Version: 0.4.1-1
+Priority: optional
+Section: utils
+Maintainer: Gemini CLI <gemini-cli@google.com>
+Installed-Size: 21
+Depends: sh, coreutils, findutils, tar, gpg, sed
+Filename: ./naive-backup_0.4.1-1_all.deb
+Size: 4468
+MD5sum: 1b5f90bff0c023341b673a3d7e1780d0
+SHA1: 3bce55dc1b1c1f4592b6b5c33c0e49af7a3a339e
+SHA256: ffc594be68b8bb246e5fd7f34ce28fbc4defb395fd92878bd5c0c700f1a7dd04
+SHA512: b04f52ea8fa666aaaaa48b94d0d80047df37d3e00272ef63897f4b8497f1fa9072a7e1a9151bc7941a7feb23e3e8664ffb46f3c8789b5160f783b623ea44a89f
+Homepage: https://github.com/jeka/naive_backup
+Description: A simple shell-based backup script
+ A lightweight backup utility that uses GPG for encryption and tar/bzip2 for archiving.
+
