@@ -111,10 +111,17 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Install Tools and Python dependencies
+      - name: Build usign
         run: |
-          sudo apt-get update && sudo apt-get install -y python3 python3-pip
-          pip install pynacl
+          sudo apt-get update && sudo apt-get install -y cmake libubox-dev
+          cd /tmp && wget -O usign.tar.gz https://git.openwrt.org/?p=project/usign.git;a=snapshot;h=master;sf=tgz
+          tar -xzf usign.tar.gz && cd usign-*
+          mkdir -p build && cd build && cmake .. && make
+          sudo make install
+
+      - name: Generate usign key
+        run: |
+          usign -G -p repokey.pub -s repokey.sec
 
       - name: Checkout gh-pages branch
         uses: actions/checkout@v6
@@ -212,29 +219,16 @@ jobs:
           
           gzip -c Packages > Packages.gz
 
-          # 4. Sign Packages and update repokey.pub
-          python3 - <<EOF
-          import base64, sys, nacl.signing
-          try:
-          original_key_b64 = 'RWSdCKxoQHl6GIxSqHYdOHlKYnNNGvTLkOWLPSfFyisHTonTLARZmXCV'
-          key_data = base64.b64decode(original_key_b64)
-          keyid = key_data[2:10]
-          seed = base64.b64decode('$MINISIGN_KEY'.strip())[10:42]
-          sk = nacl.signing.SigningKey(seed)
-          with open('Packages', 'rb') as f:
-          sig = sk.sign(f.read()).signature
-          sig_b64 = base64.b64encode(b'Ed' + keyid + sig).decode()
-          with open('Packages.sig', 'w') as f:
-          f.write(f'untrusted comment: usign signature\n{sig_b64}\n')
-          with open('repokey.pub', 'w') as f:
-          f.write('untrusted comment: naive-backup opkg repo public key\n' + original_key_b64 + '\n')
-          print(f'Successfully signed Packages with KeyID: {keyid.hex()}')
-          except Exception as e:
-          print(f'Error signing: {e}')
-          sys.exit(1)
-          EOF
-          # Clean up any legacy minisig files
-          rm -f Packages.minisig
+          # 4. Sign Packages with usign
+          usign -S -m Packages -s repokey.sec -x Packages.sig
+
+      - name: Print keys for saving
+        run: |
+          echo "=== PUBLIC KEY ==="
+          cat repokey.pub
+          echo ""
+          echo "=== PRIVATE KEY ==="
+          cat repokey.sec
           cd ../..      - name: Export Public GPG key
         run: |
           gpg --export --armor "${{ steps.import_gpg.outputs.key_id }}" > gh-pages/public.key
