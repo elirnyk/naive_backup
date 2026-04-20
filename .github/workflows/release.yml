@@ -146,11 +146,7 @@ jobs:
           echo "$USIGN_KEY" | base64 -d > repokey.sec
           chmod 600 repokey.sec
 
-      - name: Export usign public key
-        run: |
-          # Extract public key from secret key (stored in format: comment + secret + public)
-          # Second line contains public key after base64 decode
-          cat repokey.sec | head -2 | tail -1 | base64 -d | cut -c3- > gh-pages/opkg/repokey.pub
+      # Skip - will export after checkout
 
       - name: Checkout gh-pages branch
         uses: actions/checkout@v6
@@ -255,6 +251,10 @@ jobs:
       - name: Export Public GPG key
         run: |
           gpg --export --armor "${{ steps.import_gpg.outputs.key_id }}" > gh-pages/public.key
+
+      - name: Export usign public key
+        run: |
+          cat repokey.sec | head -2 | tail -1 | base64 -d | cut -c3- > gh-pages/opkg/repokey.pub
 
       - name: Commit and Push to gh-pages
         run: |
