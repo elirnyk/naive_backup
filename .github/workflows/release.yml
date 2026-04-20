@@ -254,15 +254,12 @@ jobs:
 
       - name: Export usign public key
         run: |
-          # Use usign to extract public key from secret key
-          # Create a dummy file to sign
-          echo "dummy" > /tmp/dummy
-          # Sign the dummy file (creates signature)
-          usign -S -s repokey.sec -m /tmp/dummy -x /tmp/dummy.sig
-          # Extract public key from signature using -F (fingerprint)
-          usign -F -x /tmp/dummy.sig -p /tmp/extracted.pub
-          # Copy to correct location
-          cp /tmp/extracted.pub gh-pages/opkg/repokey.pub
+          # The secret key file has comment + base64 of (comment + secret + pub)
+          # Extract public key from second line
+          cat repokey.sec | tail -1 | base64 -d | tail -c 32 | base64 -w 0 > /tmp/pub_raw
+          KEY_ID=$(cat repokey.sec | tail -1 | base64 -d | tail -c 32 | head -c 8 | xxd -p -r | base64 -w 0)
+          echo "untrusted comment: public key $KEY_ID" > gh-pages/opkg/repokey.pub
+          cat /tmp/pub_raw >> gh-pages/opkg/repokey.pub
 
       - name: Commit and Push to gh-pages
         run: |
