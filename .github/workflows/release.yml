@@ -113,6 +113,7 @@ jobs:
     steps:
 - name: Install usign
         run: |
+          set -x
           sudo apt-get update
           sudo apt-get install -y cmake libubox-dev
           cd /tmp
@@ -121,13 +122,16 @@ jobs:
           mkdir build && cd build
           cmake .. && make -j$(nproc)
           sudo make install
+          usign -V
 
       - name: Setup usign key
         env:
           USIGN_KEY: ${{ secrets.USIGN_KEY }}
         run: |
+          echo "USIGN_KEY length: ${#USIGN_KEY}"
           echo "$USIGN_KEY" | base64 -d > repokey.sec
           chmod 600 repokey.sec
+          ls -la repokey.sec
 
       - name: Checkout gh-pages branch
         uses: actions/checkout@v6
