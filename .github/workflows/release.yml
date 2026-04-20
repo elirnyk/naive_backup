@@ -114,16 +114,7 @@ jobs:
       - name: Install build deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake pkg-config
-
-      - name: Build json-c
-        run: |
-          cd /tmp
-          git clone --depth 1 https://github.com/json-c/json-c.git
-          cd json-c
-          mkdir build && cd build
-          cmake .. -DBUILD_STATIC=OFF -DBUILD_TESTING=OFF && make
-          sudo make install
+          sudo apt-get install -y cmake pkg-config libjson-c-dev lua5.1 liblua5.1-0-dev
 
       - name: Build libubox
         run: |
@@ -131,7 +122,7 @@ jobs:
           git clone --depth 1 https://github.com/openwrt/libubox.git
           cd libubox
           mkdir build && cd build
-          cmake .. && make
+          cmake .. -DBUILD_EXAMPLES=OFF -DLUAPATH=/usr && make
           sudo make install
           sudo ldconfig
 
