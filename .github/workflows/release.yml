@@ -148,8 +148,9 @@ jobs:
 
       - name: Export usign public key
         run: |
-          usign -P -s repokey.sec -p repokey.pub
-          cp repokey.pub gh-pages/opkg/repokey.pub
+          # Extract public key from secret key (stored in format: comment + secret + public)
+          # Second line contains public key after base64 decode
+          cat repokey.sec | head -2 | tail -1 | base64 -d | cut -c3- > gh-pages/opkg/repokey.pub
 
       - name: Checkout gh-pages branch
         uses: actions/checkout@v6
