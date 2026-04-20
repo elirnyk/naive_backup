@@ -254,16 +254,15 @@ jobs:
 
       - name: Export usign public key
         run: |
-          # Extract public key from secret key using usign
-          # First line of secret key is comment, second line is base64 with comment+secret+public
-          # We need to extract the public part (last 32 bytes after base64 decode)
-          SECRET_B64=$(cat repokey.sec | tail -1)
-          SECRET_DECODED=$(echo "$SECRET_B64" | base64 -d)
-          # Skip first 2 bytes (comment) and 32 bytes of secret, remaining 32 bytes is public key
-          PUBLIC_KEY=$(echo "$SECRET_DECODED" | tail -c 32 | base64 -w 0)
-          KEY_ID=$(echo "$SECRET_DECODED" | tail -c 32 | head -c 8 | xxd -p)
-          echo "untrusted comment: public key $KEY_ID" > gh-pages/opkg/repokey.pub
-          echo "$PUBLIC_KEY" >> gh-pages/opkg/repokey.pub
+          # Use usign to extract public key from secret key
+          # Create a dummy file to sign
+          echo "dummy" > /tmp/dummy
+          # Sign the dummy file (creates signature)
+          usign -S -s repokey.sec -m /tmp/dummy -x /tmp/dummy.sig
+          # Extract public key from signature using -F (fingerprint)
+          usign -F -x /tmp/dummy.sig -p /tmp/extracted.pub
+          # Copy to correct location
+          cp /tmp/extracted.pub gh-pages/opkg/repokey.pub
 
       - name: Commit and Push to gh-pages
         run: |
