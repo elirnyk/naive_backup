@@ -338,6 +338,9 @@ jobs:
           # Test update
           opkg update
 
+          # List available packages (debug)
+          opkg list | grep naive
+
           # Test install
           opkg install naive-backup
 
