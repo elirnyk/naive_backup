@@ -143,10 +143,13 @@ jobs:
             echo "ERROR: USIGN_KEY secret not set!"
             exit 1
           fi
-          echo "USIGN_KEY length: ${#USIGN_KEY}"
           echo "$USIGN_KEY" | base64 -d > repokey.sec
           chmod 600 repokey.sec
-          ls -la repokey.sec
+
+      - name: Export usign public key
+        run: |
+          usign -P -s repokey.sec -p repokey.pub
+          cp repokey.pub gh-pages/opkg/repokey.pub
 
       - name: Checkout gh-pages branch
         uses: actions/checkout@v6
