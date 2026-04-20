@@ -119,9 +119,12 @@ jobs:
           mkdir -p build && cd build && cmake .. && make
           sudo make install
 
-      - name: Generate usign key
+      - name: Setup usign key
+        env:
+          USIGN_KEY: ${{ secrets.USIGN_KEY }}
         run: |
-          usign -G -p repokey.pub -s repokey.sec
+          echo "$USIGN_KEY" | base64 -d > repokey.sec
+          chmod 600 repokey.sec
 
       - name: Checkout gh-pages branch
         uses: actions/checkout@v6
@@ -221,15 +224,9 @@ jobs:
 
           # 4. Sign Packages with usign
           usign -S -m Packages -s repokey.sec -x Packages.sig
+          cd ../..
 
-      - name: Print keys for saving
-        run: |
-          echo "=== PUBLIC KEY ==="
-          cat repokey.pub
-          echo ""
-          echo "=== PRIVATE KEY ==="
-          cat repokey.sec
-          cd ../..      - name: Export Public GPG key
+      - name: Export Public GPG key
         run: |
           gpg --export --armor "${{ steps.import_gpg.outputs.key_id }}" > gh-pages/public.key
 
