@@ -111,10 +111,22 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Install usign
+      - name: Install build deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake libubox-dev
+          sudo apt-get install -y cmake
+
+      - name: Build libubox
+        run: |
+          cd /tmp
+          git clone --depth 1 https://github.com/openwrt/libubox.git
+          cd libubox
+          mkdir build && cd build
+          cmake .. && make
+          sudo make install
+
+      - name: Build usign
+        run: |
           cd /tmp
           git clone --depth 1 https://github.com/openwrt/usign.git
           cd usign
