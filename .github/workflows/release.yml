@@ -127,7 +127,10 @@ jobs:
         env:
           USIGN_KEY: ${{ secrets.USIGN_KEY }}
         run: |
-          echo "USIGN_KEY length: ${#USIGN_KEY}"
+          if [ -z "$USIGN_KEY" ]; then
+            echo "ERROR: USIGN_KEY secret not set!"
+            exit 1
+          fi
           echo "$USIGN_KEY" | base64 -d > repokey.sec
           chmod 600 repokey.sec
 
