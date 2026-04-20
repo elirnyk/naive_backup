@@ -134,7 +134,6 @@ jobs:
           mkdir build && cd build
           cmake .. && make
           sudo make install
-          usign -V
 
       - name: Setup usign key
         env:
