@@ -111,16 +111,15 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Install usign
+- name: Install usign
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake libubox-dev
           cd /tmp
-          wget -L -O usign.tar.gz "https://git.openwrt.org/?p=project/usign.git;a=snapshot;h=master;sf=tgz"
-          tar -xzf usign.tar.gz
-          cd usign-*/
+          git clone --depth 1 https://github.com/openwrt/usign.git
+          cd usign
           mkdir build && cd build
-          cmake .. && make
+          cmake .. && make -j$(nproc)
           sudo make install
 
       - name: Setup usign key
