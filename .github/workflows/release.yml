@@ -254,7 +254,9 @@ jobs:
 
       - name: Export usign public key
         run: |
-          cat repokey.sec | head -2 | tail -1 | base64 -d | cut -c3- > gh-pages/opkg/repokey.pub
+          # The public key from the generated usign key
+          echo "untrusted comment: public key e8459388baeed28a" > gh-pages/opkg/repokey.pub
+          echo "RWToRZOIuu7Siqa0pm4DWuT8epVJBcbTstoZNwsgm6j+J1fCEqEidyeTarO481EJs2vzTg3dVh6uZVHfS3STbyryKgtF/LIhawM=" >> gh-pages/opkg/repokey.pub
 
       - name: Commit and Push to gh-pages
         run: |
