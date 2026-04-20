@@ -338,6 +338,17 @@ jobs:
         run: |
           T=$(mktemp)
           curl -sL https://elirnyk.github.io/naive_backup/opkg/repokey.pub -o $T
+          
+          echo "=== Key file ==="
+          cat $T
+          
+          echo ""
+          echo "=== Verifying manually ==="
+          curl -sL https://elirnyk.github.io/naive_backup/opkg/Packages -o /tmp/Packages
+          curl -sL https://elirnyk.github.io/naive_backup/opkg/Packages.sig -o /tmp/Packages.sig
+          usign -V -m /tmp/Packages -p $T -x /tmp/Packages.sig
+          
+          echo "=== Adding key ==="
           opkg-key add $T
           
           echo "src/gz naive_backup https://elirnyk.github.io/naive_backup/opkg" > /etc/opkg/customfeeds.conf
