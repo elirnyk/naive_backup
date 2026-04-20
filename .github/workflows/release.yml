@@ -254,12 +254,7 @@ jobs:
 
       - name: Export usign public key
         run: |
-          # The secret key file has comment + base64 of (comment + secret + pub)
-          # Extract public key from second line
-          cat repokey.sec | tail -1 | base64 -d | tail -c 32 | base64 -w 0 > /tmp/pub_raw
-          KEY_ID=$(cat repokey.sec | tail -1 | base64 -d | tail -c 32 | head -c 8 | xxd -p -r | base64 -w 0)
-          echo "untrusted comment: public key $KEY_ID" > gh-pages/opkg/repokey.pub
-          cat /tmp/pub_raw >> gh-pages/opkg/repokey.pub
+          usign -M -p gh-pages/opkg/repokey.pub -s repokey.sec
 
       - name: Commit and Push to gh-pages
         run: |
@@ -327,23 +322,15 @@ jobs:
         run: |
           opkg install curl usign bash coreutils-base64 xxd
 
-      - name: Test OPKG installation
+- name: Test OPKG installation
         run: |
-          # Add repo key
-          (T=$(mktemp) && trap "rm -f $T" EXIT && curl -sL https://elirnyk.github.io/naive_backup/opkg/repokey.pub -o $T && opkg-key add $T)
-
-          # Create custom opkg.conf to use only our repo
-          printf 'arch all 100\narch x86_64 200\nsrc/gz naive_backup https://elirnyk.github.io/naive_backup/opkg\n' > /tmp/test-opkg.conf
-
-          # Test update with custom config
-          opkg -f /tmp/test-opkg.conf update naive_backup
-
-          # List available packages
-          opkg -f /tmp/test-opkg.conf list naive-backup
-
-          # Test install
-          opkg -f /tmp/test-opkg.conf install naive-backup
-
-          # Verify installed
-          which naive_backup.sh && echo "SUCCESS: naive-backup installed and verified!"
+          T=$(mktemp)
+          curl -sL https://elirnyk.github.io/naive_backup/opkg/repokey.pub -o $T
+          opkg-key add $T
+          
+          echo "src/gz naive_backup https://elirnyk.github.io/naive_backup/opkg" > /etc/opkg/customfeeds.conf
+          opkg update naive_backup
+          
+          opkg install naive-backup
+          which naive-backup && echo "SUCCESS: naive-backup installed!"
 
