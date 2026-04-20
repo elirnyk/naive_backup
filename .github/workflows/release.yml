@@ -254,9 +254,18 @@ jobs:
 
       - name: Export usign public key
         run: |
-          KEY=$(cat repokey.sec | base64 -d | tail -c 32 | base64 -w 0)
-          echo "untrusted comment: public key" > gh-pages/opkg/repokey.pub
-          echo "$KEY" >> gh-pages/opkg/repokey.pub
+          python3 << 'EOF'
+          import base64
+          with open('repokey.sec', 'r') as f:
+              lines = f.read().strip().split('\n')
+          key_data = base64.b64decode(lines[1])
+          comment_len = 32
+          pubkey = key_data[64:]
+          with open('gh-pages/opkg/repokey.pub', 'w') as f:
+              f.write('untrusted comment: public key\n')
+              f.write(base64.b64encode(pubkey).decode() + '\n')
+          print("Exported public key")
+          EOF
 
       - name: Commit and Push to gh-pages
         run: |
