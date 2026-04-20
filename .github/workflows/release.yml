@@ -314,6 +314,11 @@ jobs:
       image: openwrt/rootfs:x86_64
       options: --privileged
     steps:
+      - name: Install utilities
+        run: |
+          opkg update
+          opkg install curl
+
       - name: Test OPKG installation
         run: |
           # Add repo key
