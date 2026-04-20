@@ -111,16 +111,15 @@ jobs:
     permissions:
       contents: write
     steps:
-- name: Install usign
+      - name: Install usign
         run: |
-          set -x
           sudo apt-get update
           sudo apt-get install -y cmake libubox-dev
           cd /tmp
           git clone --depth 1 https://github.com/openwrt/usign.git
           cd usign
           mkdir build && cd build
-          cmake .. && make -j$(nproc)
+          cmake .. && make
           sudo make install
           usign -V
 
@@ -131,7 +130,6 @@ jobs:
           echo "USIGN_KEY length: ${#USIGN_KEY}"
           echo "$USIGN_KEY" | base64 -d > repokey.sec
           chmod 600 repokey.sec
-          ls -la repokey.sec
 
       - name: Checkout gh-pages branch
         uses: actions/checkout@v6
