@@ -332,17 +332,17 @@ jobs:
           # Add repo key
           (T=$(mktemp) && trap "rm -f $T" EXIT && curl -sL https://elirnyk.github.io/naive_backup/opkg/repokey.pub -o $T && opkg-key add $T)
 
-          # Add repo
-          echo "src/gz naive_backup https://elirnyk.github.io/naive_backup/opkg" > /etc/opkg/customfeeds.conf
+          # Create custom opkg.conf to use only our repo
+          printf 'arch all 100\narch x86_64 200\nsrc/gz naive_backup https://elirnyk.github.io/naive_backup/opkg\n' > /tmp/test-opkg.conf
 
-          # Test update
-          opkg update
+          # Test update with custom config
+          opkg -f /tmp/test-opkg.conf update naive_backup
 
-          # List available packages (debug)
-          opkg list | grep naive
+          # List available packages
+          opkg -f /tmp/test-opkg.conf list naive-backup
 
           # Test install
-          opkg install naive-backup
+          opkg -f /tmp/test-opkg.conf install naive-backup
 
           # Verify installed
           which naive_backup.sh && echo "SUCCESS: naive-backup installed and verified!"
