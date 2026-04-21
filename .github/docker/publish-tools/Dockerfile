@@ -11,14 +11,17 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     libjson-c-dev \
     liblua5.1-0-dev \
+    lua5.1 \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Build libubox
 RUN git clone --depth 1 https://github.com/openwrt/libubox.git /tmp/libubox && \
     cd /tmp/libubox && \
     mkdir build && cd build && \
-    cmake .. -DBUILD_EXAMPLES=OFF && \
-    make install
+    cmake .. -DBUILD_EXAMPLES=OFF -DLUAPATH=/usr && \
+    make install && \
+    ldconfig
 
 # Build usign
 RUN git clone --depth 1 https://github.com/openwrt/usign.git /tmp/usign && \
