@@ -1,3 +1,2 @@
 naive_backup.sh usr/bin
 etc/debian/settings.conf etc/naivebackup/
-/naive-backup
