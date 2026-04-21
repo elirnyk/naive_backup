@@ -9,8 +9,21 @@ cleanup() {
 
 persist_check() {
 
-    if [ -z "$BACKUPDIR" ] || [ ! -d "$BACKUPDIR" ]; then
-        echo "BACKUPDIR config parameter is required and directory specified should be writeable" >&2
+    if [ -z "$BACKUPDIR" ]; then
+        echo "BACKUPDIR config parameter is required for default persistence." >&2
+        return 1
+    fi
+
+    if [ ! -d "$BACKUPDIR" ]; then
+        echo "[mkdir]--> $BACKUPDIR" >&3
+        if ! mkdir -p "$BACKUPDIR"; then
+            echo "Failed to create BACKUPDIR '$BACKUPDIR'." >&2
+            return 1
+        fi
+    fi
+
+    if [ ! -w "$BACKUPDIR" ]; then
+        echo "BACKUPDIR '$BACKUPDIR' is not writeable." >&2
         return 1
     fi
 }
