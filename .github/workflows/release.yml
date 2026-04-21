@@ -327,6 +327,6 @@ jobs:
           # Test install
           opkg -f /tmp/test-opkg.conf install naive-backup
 
-          # Verify installed
-          which naive_backup.sh && echo "SUCCESS: naive-backup installed and verified!"
+          # Verify installed (correct binary name)
+          which naive-backup && echo "SUCCESS: naive-backup installed and verified!"
 
