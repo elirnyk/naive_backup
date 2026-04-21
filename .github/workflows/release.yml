@@ -71,12 +71,15 @@ jobs:
           EOF
           # Add conffiles to ensure user changes are preserved on upgrade
           echo "/etc/naivebackup/settings.conf" > staging/control/conffiles
+          echo "/etc/naivebackup/files-config.sh" >> staging/control/conffiles
 
       - name: Copy Script and Config
         run: |
           cp naive_backup.sh staging/data/usr/bin/naive-backup
           chmod +x staging/data/usr/bin/naive-backup
           cp etc/openwrt/settings.conf staging/data/etc/naivebackup/settings.conf
+          cp etc/openwrt/files-config.sh staging/data/etc/naivebackup/files-config.sh
+          chmod +x staging/data/etc/naivebackup/files-config.sh
 
       - name: Build .ipk package manually
         id: build_ipk
