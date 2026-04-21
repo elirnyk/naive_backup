@@ -4,7 +4,8 @@ on:
   push:
     paths:
       - '.github/docker/publish-tools/Dockerfile'
-  workflow_dispatch: # Allows manual trigger from UI
+      - '.github/docker/debian-build/Dockerfile'
+  workflow_dispatch:
 
 jobs:
   build-and-push:
@@ -12,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write # Required for pushing to GHCR
+      packages: write
 
     strategy:
       matrix:
