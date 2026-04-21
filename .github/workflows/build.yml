@@ -16,3 +16,11 @@ jobs:
     - uses: actions/checkout@v6
     - name: Run ShellCheck
       uses: ludeeus/action-shellcheck@master
+
+  actionlint:
+    name: Actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run actionlint
+        uses: reviewdog/action-actionlint@v1
