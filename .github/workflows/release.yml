@@ -192,7 +192,7 @@ jobs:
           rm -f Packages Packages.gz Packages.sig
           # Use a temporary directory for unique package indexing
           mkdir -p idx_tmp
-          for pkg in *.ipk; do
+          for pkg in $(ls *.ipk | sort -V); do
             [ -f "$pkg" ] || continue
             # Avoid duplicate indexing if same filename exists (e.g. from gh release download)
             [ -f "idx_tmp/$pkg.done" ] && continue
