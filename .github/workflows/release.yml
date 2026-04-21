@@ -108,33 +108,11 @@ jobs:
     name: Publish to GitHub Pages
     needs: [build-deb, build-ipk]
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/publish-tools:latest
     permissions:
       contents: write
     steps:
-      - name: Install build deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake pkg-config libjson-c-dev lua5.1 liblua5.1-0-dev
-
-      - name: Build libubox
-        run: |
-          cd /tmp
-          git clone --depth 1 https://github.com/openwrt/libubox.git
-          cd libubox
-          mkdir build && cd build
-          cmake .. -DBUILD_EXAMPLES=OFF -DLUAPATH=/usr && make
-          sudo make install
-          sudo ldconfig
-
-      - name: Build usign
-        run: |
-          cd /tmp
-          git clone --depth 1 https://github.com/openwrt/usign.git
-          cd usign
-          mkdir build && cd build
-          cmake .. && make
-          sudo make install
-
       - name: Setup usign key
         env:
           USIGN_KEY: ${{ secrets.USIGN_KEY }}
@@ -145,8 +123,6 @@ jobs:
           fi
           echo "$USIGN_KEY" | base64 -d > repokey.sec
           chmod 600 repokey.sec
-
-      # Skip - will export after checkout
 
       - name: Checkout gh-pages branch
         uses: actions/checkout@v6

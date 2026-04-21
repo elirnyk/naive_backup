@@ -1,7 +1,10 @@
-name: 'Trigger: Push action'
+name: 'Trigger: Push and Pull Request action'
 
 on:
   push:
+    branches:
+      - master
+  pull_request:
     branches:
       - master
 
