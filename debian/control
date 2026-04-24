@@ -8,6 +8,6 @@ Homepage: https://github.com/jeka/naive_backup
 
 Package: naive-backup
 Architecture: all
-Depends: sh, coreutils, findutils, tar, gpg, sed
+Depends: coreutils, findutils, tar, gpg, sed
 Description: A simple shell-based backup script
  A lightweight backup utility that uses GPG for encryption and tar/bzip2 for archiving.
