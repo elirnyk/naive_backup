@@ -428,3 +428,13 @@ Filename: naive-backup_0.7.6_all.ipk
 Size: 5136
 SHA256sum: 6ee2211a00618e0479482d372d65604d64dc819e148fba3dbc3ced3effc6a899
 
+Package: naive-backup
+Version: 0.7.7
+Depends: bzip2, coreutils-stat, gnupg
+Architecture: all
+Maintainer: Gemini CLI <gemini-cli@google.com>
+Description: A simple shell-based backup script.
+Filename: naive-backup_0.7.7_all.ipk
+Size: 5141
+SHA256sum: ec4b3f28c1e22549f726f0e65f95156a25124566c91a43f6e34cb5f7a70d6192
+
