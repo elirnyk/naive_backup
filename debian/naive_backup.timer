@@ -1,0 +1,11 @@
+[Unit]
+Description=Do backup daily
+
+[Timer]
+OnCalendar=*-*-* 2:30:00
+Persistent=false
+Unit=naive_backup.service
+
+[Install]
+WantedBy=timers.target
+
