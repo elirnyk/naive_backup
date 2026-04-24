@@ -3,7 +3,7 @@ Description=Backup
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/naive_backup.sh
+ExecStart=/usr/bin/naive-backup
 
 [Install]
 WantedBy=multi-user.target

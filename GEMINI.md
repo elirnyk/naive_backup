@@ -1,10 +1,10 @@
 # Naive Backup: Project Context
 
-This file serves as a foundational guide for AI agents and developers working on the `naive_backup` project.
+This file serves as a foundational guide for AI agents and developers working on the `naive-backup` project.
 
 ## Project Overview
 
-`naive_backup` is a lightweight, shell-based backup utility designed for simplicity, security, and efficiency. It is intended for use in environments where minimal dependencies are preferred (e.g., servers, OpenWrt routers).
+`naive-backup` is a lightweight, shell-based backup utility designed for simplicity, security, and efficiency. It is intended for use in environments where minimal dependencies are preferred (e.g., servers, OpenWrt routers).
 
 -   **Main Technology:** Bash (currently transitioning to POSIX-compliant Shell).
 -   **Security:** Uses GPG for asymmetric encryption and signing of all backup archives.
@@ -16,7 +16,7 @@ This file serves as a foundational guide for AI agents and developers working on
 
 ## Core Components
 
--   `naive_backup.sh`: The main execution script.
+-   `naive-backup`: The main execution script.
 -   `/etc/naivebackup/settings.conf`: Global configuration (GPG recipients, backup directory, etc.).
 -   **Definitions:**
     -   `files-*.lst`: Plain text list of files/directories to back up.
@@ -29,7 +29,7 @@ This file serves as a foundational guide for AI agents and developers working on
 The project uses **ShellCheck** for static analysis.
 ```bash
 # Run shellcheck on the main script
-shellcheck naive_backup.sh
+shellcheck naive-backup
 ```
 
 ### Testing
@@ -41,7 +41,7 @@ To run the script locally for testing without modifying system files:
 # Create a local config directory
 mkdir -p ./test_conf
 # Run with custom config path
-./naive_backup.sh -c ./test_conf
+./naive-backup -c ./test_conf
 ```
 
 ### Packaging

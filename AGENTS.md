@@ -4,10 +4,10 @@
 
 ```bash
 # Run locally for testing (avoids /etc/naivebackup)
-./naive_backup.sh -c ./test_conf
+./naive-backup -c ./test_conf
 
 # Lint (ShellCheck is the only CI check)
-shellcheck naive_backup.sh
+shellcheck naive-backup
 
 # Build Debian package
 dpkg-buildpackage -us -uc -b
@@ -19,7 +19,7 @@ opkg install naive-backup_<ver>_all.ipk
 
 ## Key Facts
 
-- **Script**: `naive_backup.sh` - POSIX-compliant sh (not bash)
+- **Script**: `naive-backup` - POSIX-compliant sh (not bash)
 - **Config dir**: `/etc/naivebackup/` (default) or `-c <path>` override
 - **Settings**: `settings.conf` - requires `ENCRYPT_RECIPIENT`, `BACKUPDIR`
 - **GPG**: All backups encrypted and signed; `ENCRYPT_RECIPIENT` is comma-separated list
@@ -44,11 +44,11 @@ Numeric prefixes allowed: `10-files-foo.lst`, `20-content-bar.sh` (processed in 
 
 - `CONTENT_WORK_DIR` must be owned by current user with `0700` permissions
 - Filenames with spaces/newlines: use `find -print0` + `read -r -d ''`
-- ShellCheck warnings in `naive_backup.sh` are annotated with `shellcheck disable=...` - don't remove without checking
+- ShellCheck warnings in `naive-backup` are annotated with `shellcheck disable=...` - don't remove without checking
 - Avoid bashisms: no `[[ ]]`, no `local`, no process substitution `<()` - use `find ... | while read` with here-docs for variable scope
 
 ## Reference
 
 - `README.md`: Usage and architecture
 - `GEMINI.md`: Technical context and conventions
-- `naive_backup.sh`: Source of truth
+- `naive-backup`: Source of truth

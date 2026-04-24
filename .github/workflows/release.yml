@@ -74,7 +74,7 @@ jobs:
 
       - name: Copy Script and Config
         run: |
-          cp naive_backup.sh staging/data/usr/bin/naive-backup
+          cp naive-backup staging/data/usr/bin/naive-backup
           chmod +x staging/data/usr/bin/naive-backup
           cp etc/openwrt/settings.conf staging/data/etc/naivebackup/settings.conf
           cp etc/openwrt/files-config.sh staging/data/etc/naivebackup/files-config.sh
