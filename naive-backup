@@ -1,5 +1,11 @@
 #!/bin/sh
 
+if ! (set -o pipefail 2>/dev/null); then
+    if [ -z "$BASH_VERSION" ] && command -v bash >/dev/null 2>&1; then
+        exec bash "$0" "$@"
+    fi
+fi
+
 trap cleanup EXIT
 
 cleanup() {
