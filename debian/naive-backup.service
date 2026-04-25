@@ -5,6 +5,3 @@ Description=Backup
 Type=oneshot
 ExecStart=/usr/bin/naive-backup
 
-[Install]
-WantedBy=multi-user.target
-
