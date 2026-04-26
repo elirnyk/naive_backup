@@ -73,7 +73,7 @@ First, you need to add the repository's public GPG key to your system to verify 
 2. **Add the Repository:**
    
    ```bash
-   echo "deb [signed-by=/usr/share/keyrings/naive-backup-archive-keyring.gpg] https://jeka.github.io/naive_backup/apt/ ./" | sudo tee /etc/apt/sources.list.d/naive-backup.list
+   echo "deb [signed-by=/usr/share/keyrings/naive-backup-archive-keyring.gpg] https://elienyk.github.io/naive_backup/apt/ ./" | sudo tee /etc/apt/sources.list.d/naive-backup.list
    ```
 
 3. **Install the Package:**
