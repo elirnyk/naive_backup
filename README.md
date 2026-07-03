@@ -1,3 +1,5 @@
+WORK IN PROGRESS, DO NOT USE
+
 # Naive Backup
 
 Naive Backup is a lightweight, shell-based backup utility designed for simplicity and security. It uses GPG for encryption and `tar`/`bzip2` for archiving, with support for incremental backups. It is configured via simple definition files and is ideal for backing up file lists and database dumps from cron jobs.
