@@ -37,6 +37,11 @@ VERSION="$1"
 SIGN_KEY="$2"
 OUTDIR="$3"
 
+# apk runs below in a subshell that cd's into a temp work dir, so make
+# relative paths absolute now (against the caller's cwd) before we leave it.
+case "$SIGN_KEY" in /*) ;; *) SIGN_KEY="$PWD/$SIGN_KEY" ;; esac
+case "$OUTDIR" in /*) ;; *) OUTDIR="$PWD/$OUTDIR" ;; esac
+
 VERSION="${VERSION#v}"
 case "$VERSION" in
     *-r[0-9]*) ;;
