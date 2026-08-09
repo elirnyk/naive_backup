@@ -56,7 +56,7 @@ Content-based backups are designed for script outputs, like database dumps. This
 
 ## Installation
 
-You can install Naive Backup using the official APT or OPKG repositories, which are automatically updated on every release.
+You can install Naive Backup using the official APT, OPKG, or APK repositories, which are automatically updated on every release.
 
 ### Public GPG Key
 
@@ -107,6 +107,30 @@ First, you need to add the repository's public GPG key to your system to verify 
    ```
 
    > **Note:** If you encounter signature errors, disable by adding `#` before `option check_signature` in `/etc/opkg/`
+
+### For OpenWrt 25.x (APK)
+
+OpenWrt 25.x and later use `apk` instead of `opkg`.
+
+1. **Add the repository signing key:**
+
+   ```bash
+   mkdir -p /etc/apk/keys
+   uclient-fetch https://elirnyk.github.io/naive_backup/apk/naive-backup.pem -O /etc/apk/keys/naive-backup.pem
+   ```
+
+2. **Add the Repository:** Add the following line to `/etc/apk/repositories.d/customfeeds.list`:
+
+   ```
+   https://elirnyk.github.io/naive_backup/apk/packages.adb
+   ```
+
+3. **Install the Package:**
+
+   ```bash
+   apk update
+   apk add naive-backup
+   ```
 
 ### OpenWrt Dependencies
 

@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
 
 jobs:
   build-deb:
@@ -110,9 +111,52 @@ jobs:
           name: ipk-package
           path: naive-backup_*.ipk
 
+  build-apk:
+    name: Build OpenWrt APK Package
+    runs-on: ubuntu-latest
+    outputs:
+      apk_filename: ${{ steps.build_apk.outputs.package_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install apk-tools and openssl
+        run: |
+          curl -sL https://dl-cdn.alpinelinux.org/alpine/v3.23/main/x86_64/apk-tools-static-3.0.7-r0.apk -o /tmp/apk-tools-static.apk
+          mkdir -p /tmp/apk-tools
+          tar -xzf /tmp/apk-tools-static.apk -C /tmp/apk-tools
+          sudo cp /tmp/apk-tools/sbin/apk.static /usr/local/bin/apk
+          sudo chmod +x /usr/local/bin/apk
+          apk --version
+
+      - name: Setup signing key
+        env:
+          APK_REPOSITORY_KEY: ${{ secrets.APK_REPOSITORY_KEY }}
+        run: |
+          if [ -z "$APK_REPOSITORY_KEY" ]; then
+            echo "ERROR: APK_REPOSITORY_KEY secret not set!"
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$APK_REPOSITORY_KEY" | base64 -d > repokey.key
+          chmod 600 repokey.key
+
+      - name: Build and sign APK repository
+        id: build_apk
+        run: |
+          VERSION="${{ github.ref_name }}"
+          sh scripts/build_apk_repo.sh "${VERSION#v}" repokey.key apk-repo
+          echo "package_name=$(ls apk-repo/*.apk | xargs -n1 basename)" >> $GITHUB_OUTPUT
+
+      - name: Upload .apk artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: apk-repo
+          path: apk-repo/*
+
   publish:
     name: Publish to GitHub Pages
-    needs: [build-deb, build-ipk]
+    needs: [build-deb, build-ipk, build-apk]
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/${{ github.repository_owner }}/publish-tools:latest
@@ -147,6 +191,12 @@ jobs:
         with:
           name: ipk-package
           path: dist/ipk
+
+      - name: Download .apk artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: apk-repo
+          path: dist/apk
 
       - name: Import GPG Key
         id: import_gpg
@@ -230,6 +280,11 @@ jobs:
           usign -S -m Packages -s ../../repokey.sec -x Packages.sig
           cd ../..
 
+      - name: Update APK Repository
+        run: |
+          mkdir -p gh-pages/apk
+          cp -a dist/apk/. gh-pages/apk/
+
       - name: Export Public GPG key
         run: |
           gpg --export --armor "${{ steps.import_gpg.outputs.key_id }}" > gh-pages/public.key
@@ -258,7 +313,7 @@ jobs:
 
   github-release:
     name: Create GitHub Release
-    needs: [build-deb, build-ipk]
+    needs: [build-deb, build-ipk, build-apk]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -280,6 +335,12 @@ jobs:
           name: ipk-package
           path: .
 
+      - name: Download .apk artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: apk-repo
+          path: apk-release
+
       - name: Create Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -288,6 +349,7 @@ jobs:
           gh release create "${{ github.ref_name }}" \
             *.deb \
             *.ipk \
+            apk-release/*.apk \
             --title "Release ${{ github.ref_name }}" \
             --generate-notes
 
@@ -325,6 +387,37 @@ jobs:
 
           # Test install
           opkg -f /tmp/test-opkg.conf install naive-backup
+
+          # Verify installed (correct binary name)
+          which naive-backup && echo "SUCCESS: naive-backup installed and verified!"
+
+  test-apk:
+    name: Test APK Installation
+    runs-on: ubuntu-latest
+    needs: publish
+    container:
+      image: openwrt/rootfs:x86_64-25.12.4
+      options: --privileged
+    steps:
+      - name: Setup OpenWrt
+        run: |
+          # Setup is required in OpenWrt container
+          [ ! -d /var/lock ] && mkdir /var/lock
+
+      - name: Add repository signing key
+        run: |
+          mkdir -p /etc/apk/keys
+          uclient-fetch https://elirnyk.github.io/naive_backup/apk/naive-backup.pem -O /etc/apk/keys/naive-backup.pem
+
+      - name: Add APK repository
+        run: |
+          printf 'https://elirnyk.github.io/naive_backup/apk/packages.adb\n' > /etc/apk/repositories.d/customfeeds.list
+
+      - name: Test APK installation
+        run: |
+          apk update
+          apk search -v naive-backup
+          apk add naive-backup
 
           # Verify installed (correct binary name)
           which naive-backup && echo "SUCCESS: naive-backup installed and verified!"

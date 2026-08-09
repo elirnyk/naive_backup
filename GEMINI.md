@@ -12,7 +12,7 @@ This file serves as a foundational guide for AI agents and developers working on
     -   **File-Based:** Uses manifest-based checksums to skip backups if no file changes (content, permissions, or ownership) are detected.
     -   **Content-Based:** Executes scripts (e.g., database dumps) and performs incremental `diff` backups to minimize storage usage.
 -   **Architecture:** POSIX-compliant infrastructure.
--   **Packaging:** Supports Debian (APT) and OpenWrt (OPKG).
+-   **Packaging:** Supports Debian (APT), OpenWrt (OPKG), and OpenWrt 25.x (APK).
 
 ## Core Components
 
