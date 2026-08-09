@@ -35,7 +35,7 @@ jobs:
 
       - name: Get Package Filename
         id: get_filename
-        run: echo "package_name=$(ls *.deb)" >> $GITHUB_OUTPUT
+        run: echo "package_name=$(ls ./*.deb)" >> "$GITHUB_OUTPUT"
 
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v7
@@ -87,7 +87,7 @@ jobs:
           VERSION="${{ github.ref_name }}"
           PKG_VER="${VERSION#v}"
           PACKAGE_NAME="naive-backup_${PKG_VER}_all.ipk"
-          echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
           
           printf "2.0\n" > debian-binary
           
@@ -146,7 +146,7 @@ jobs:
         run: |
           VERSION="${{ github.ref_name }}"
           sh scripts/build_apk_repo.sh "${VERSION#v}" repokey.key apk-repo
-          echo "package_name=$(ls apk-repo/*.apk | xargs -n1 basename)" >> $GITHUB_OUTPUT
+          echo "package_name=$(basename "$(find apk-repo -maxdepth 1 -name '*.apk')")" >> "$GITHUB_OUTPUT"
 
       - name: Upload .apk artifacts
         uses: actions/upload-artifact@v7
@@ -205,7 +205,7 @@ jobs:
         run: |
           echo "$GPG_PRIVATE_KEY" | gpg --batch --import
           GPG_KEY_ID=$(gpg --list-keys --with-colons | grep 'fpr' | head -n 1 | cut -d: -f10)
-          echo "key_id=$GPG_KEY_ID" >> $GITHUB_OUTPUT
+          echo "key_id=$GPG_KEY_ID" >> "$GITHUB_OUTPUT"
           echo "Imported GPG key $GPG_KEY_ID"
 
       - name: Update APT Repository
@@ -248,7 +248,7 @@ jobs:
           rm -f Packages Packages.gz Packages.sig
           # Use a temporary directory for unique package indexing
           mkdir -p idx_tmp
-          for pkg in $(ls *.ipk | sort -V); do
+          for pkg in $(find . -maxdepth 1 -name '*.ipk' -printf '%f\n' | sort -V); do
             [ -f "$pkg" ] || continue
             # Avoid duplicate indexing if same filename exists (e.g. from gh release download)
             [ -f "idx_tmp/$pkg.done" ] && continue
@@ -293,8 +293,8 @@ jobs:
         run: |
           # The secret key file has comment + base64 of (comment + secret + pub)
           # Extract public key from second line
-          cat repokey.sec | tail -1 | base64 -d | tail -c 32 | base64 -w 0 > /tmp/pub_raw
-          KEY_ID=$(cat repokey.sec | tail -1 | base64 -d | tail -c 32 | head -c 8 | xxd -p -r | base64 -w 0)
+          tail -1 repokey.sec | base64 -d | tail -c 32 | base64 -w 0 > /tmp/pub_raw
+          KEY_ID=$(tail -1 repokey.sec | base64 -d | tail -c 32 | head -c 8 | xxd -p -r | base64 -w 0)
           echo "untrusted comment: public key $KEY_ID" > gh-pages/opkg/repokey.pub
           cat /tmp/pub_raw >> gh-pages/opkg/repokey.pub
 
@@ -347,8 +347,8 @@ jobs:
         run: |
           gh release delete "${{ github.ref_name }}" --yes 2>/dev/null || true
           gh release create "${{ github.ref_name }}" \
-            *.deb \
-            *.ipk \
+            ./*.deb \
+            ./*.ipk \
             apk-release/*.apk \
             --title "Release ${{ github.ref_name }}" \
             --generate-notes
@@ -374,7 +374,7 @@ jobs:
       - name: Test OPKG installation
         run: |
           # Add repo key
-          (T=$(mktemp) && trap "rm -f $T" EXIT && curl -sL https://elirnyk.github.io/naive_backup/opkg/repokey.pub -o $T && opkg-key add $T)
+          (T=$(mktemp) && trap 'rm -f "$T"' EXIT && curl -sL https://elirnyk.github.io/naive_backup/opkg/repokey.pub -o "$T" && opkg-key add "$T")
 
           # Create custom opkg.conf to use only our repo
           printf 'arch all 100\narch x86_64 200\nsrc/gz naive_backup https://elirnyk.github.io/naive_backup/opkg\n' > /tmp/test-opkg.conf
