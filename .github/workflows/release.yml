@@ -404,6 +404,21 @@ jobs:
           # Setup is required in OpenWrt container
           [ ! -d /var/lock ] && mkdir /var/lock
 
+      - name: Wait for GitHub Pages CDN
+        run: |
+          # GitHub Pages serves through a CDN that can lag the gh-pages push by
+          # a minute or two. Poll until the files are actually served (max 5 min).
+          i=0
+          until wget -q -O /dev/null https://elirnyk.github.io/naive_backup/apk/naive-backup.pem; do
+            i=$((i + 1))
+            if [ "$i" -ge 30 ]; then
+              echo "ERROR: APK repository still not reachable after 5 minutes" >&2
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "GitHub Pages CDN is serving the APK repository."
+
       - name: Add repository signing key
         run: |
           mkdir -p /etc/apk/keys
